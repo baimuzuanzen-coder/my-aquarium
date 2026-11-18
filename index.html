@@ -12,7 +12,7 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: #062236;
+      background: #06336e;
       color: #eef6fb;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Noto Sans JP", sans-serif;
       user-select: none;
@@ -201,22 +201,40 @@
     const HALF_Z = TANK_D / 2;   // 2.75
     const WATER_Y = 2.6;
 
-    // ===== 見た目設定 STYLE（v2 流用要件：数値外出し） =====
+    // ===== 見た目設定 STYLE（v2/v3 流用要件：数値外出し） =====
     const STYLE = {
-      // 背景・フォグ・照明・露出・カメラ (§7)
-      bgColor: 0x062236,
-      fogDensity: 0.052,
-      hemiSkyColor: 0xbfe6ff,
-      hemiGroundColor: 0x1a3446,
-      hemiIntensity: 0.55,
-      sunColor: 0xffffff,
-      sunIntensity: 1.8,
-      sunPosition: [2, 6, 1],
-      environmentIntensity: 0.4,
-      exposure: 1.05,
+      // 背景・フォグ・照明・露出・カメラ (§7 / v3)
+      bgColor: 0x06336e,
+      fogDensity: 0.045,
+      hemiSkyColor: 0x4a86d6,
+      hemiGroundColor: 0x041228,
+      hemiIntensity: 0.7,
+      sunColor: 0xbfe3ff,
+      sunIntensity: 1.35,
+      sunPosition: [0.0, 8.0, -2.4],
+      environmentIntensity: 0.10,
+      exposure: 1.15,
       cameraFov: 38,
       cameraPosition: [2.6, 1.35, 3.35],
       cameraTarget: [0, 1.05, 0],
+
+      // 背面グラデーション板（v3：背面ガラス z=-2.75 の外側 z=-2.9、fog 無効）
+      backdropWidth: 9.6,
+      backdropHeight: 3.4,
+      backdropCenterY: 1.1,
+      backdropZ: -2.9,
+      backdropTopColor: '#2a6fd0',
+      backdropMidColor: '#0a3f86',
+      backdropBottomColor: '#02142e',
+      backdropMidStop: 0.34,
+      backdropBottomStop: 0.74,
+
+      // 水面の光だまり（v3：水面下 y=2.56、下面からのみ可視、Additive）
+      surfaceGlowY: 2.56,
+      surfaceGlowOpacity: 0.18,
+      surfaceGlowCenterColor: 'rgba(235, 250, 255, 1.0)',
+      surfaceGlowMidColor: 'rgba(95, 185, 255, 0.72)',
+      surfaceGlowEdgeColor: 'rgba(6, 51, 110, 0.0)',
 
       // 筐体：台座・砂側面・ガラス・枠 (§2)
       pedestalWidth: 9.7,
@@ -277,14 +295,14 @@
       particleSwayFreqMin: 0.35,
       particleSwayFreqMax: 0.75,
 
-      // コースティクス (§4 / v2第2パス：細かい網目)
+      // コースティクス (§4 / v2第2パス：細かい網目 / v3：sandGain 0.26)
       causticsColor: 0xcfeaff,
       causticsScale1: 5.5,
       causticsScale2: 10.5,
       causticsSpeed1: 0.55,
       causticsSpeed2: 0.85,
       causticsPow: 5.0,
-      causticsSandGain: 0.22,
+      causticsSandGain: 0.26,
       causticsSandRadiusX: 3.4,
       causticsSandRadiusZ: 2.0,
       causticsSandInner: 0.35,
@@ -305,22 +323,24 @@
       rockBumpScale: 0.30,
       rockBumpRepeat: [5, 5],
 
-      // 光の筋 (§6 / v2第2パス)
-      rayCount: 4,
-      rayColor: 0xbfe2f2,
+      // 光の筋 (§6 / v2第2パス / v3：5本・幅約2倍・強度アップ)
+      rayCount: 5,
+      rayWidthScale: 2.0,
+      rayColor: 0xeaf7ff,
       rayHeight: 2.7,
       rayCenterY: 1.32,
-      rayBaseOpacity: 0.06,
-      rayOpacityMin: 0.04,
-      rayOpacityMax: 0.075,
-      rayMaxOpacity: 0.08,
-      rayTiltZ: 0.32,
+      rayBaseOpacity: 0.10,
+      rayOpacityMin: 0.06,
+      rayOpacityMax: 0.16,
+      rayMaxOpacity: 0.16,
+      rayTiltZ: 0.31,
       raySwayAmp: 0.02,
       rayConfigs: [
-        { x: -3.0, z: -0.65, width: 1.02, tiltZ: -0.32, rotY:  0.18, period: 22.0, phase: 0.3 },
-        { x: -1.2, z:  0.35, width: 1.62, tiltZ: -0.31, rotY: -0.14, period: 27.5, phase: 1.8 },
-        { x:  0.9, z: -0.40, width: 1.38, tiltZ: -0.33, rotY:  0.12, period: 31.0, phase: 3.5 },
-        { x:  2.6, z:  0.50, width: 1.14, tiltZ: -0.30, rotY: -0.18, period: 34.0, phase: 5.0 },
+        { x: -2.85, z: -0.95, width: 1.05, tiltZ: -0.30, rotY:  0.26, period: 22.0, phase: 0.3 },
+        { x: -1.35, z:  0.25, width: 1.55, tiltZ: -0.31, rotY: -0.06, period: 27.5, phase: 1.2 },
+        { x:  0.00, z: -0.55, width: 1.35, tiltZ: -0.32, rotY:  0.18, period: 31.0, phase: 2.1 },
+        { x:  1.45, z:  0.40, width: 1.25, tiltZ: -0.30, rotY: -0.14, period: 29.0, phase: 0.8 },
+        { x:  2.75, z: -0.75, width: 1.10, tiltZ: -0.29, rotY:  0.24, period: 34.0, phase: 5.5 },
       ],
     };
 
@@ -917,7 +937,9 @@ float aqCausticPattern(vec2 xz, float t) {
 
     // ===== 部品：光の筋 (buildLightRays) =====
     function buildLightRays(options = {}) {
-      const configs = options.rayConfigs ?? STYLE.rayConfigs;
+      const count = options.count ?? STYLE.rayCount;
+      const configs = (options.rayConfigs ?? STYLE.rayConfigs).slice(0, count);
+      const widthScale = options.widthScale ?? STYLE.rayWidthScale ?? 1.0;
       const height = options.height ?? STYLE.rayHeight;
       const centerY = options.centerY ?? STYLE.rayCenterY;
       const opMin = options.opacityMin ?? STYLE.rayOpacityMin;
@@ -933,11 +955,12 @@ float aqCausticPattern(vec2 xz, float t) {
       for (let y = 0; y < 256; y++) {
         const v = y / 255; // 0: top, 1: bottom
         const topEdge = smoothstep(v, 0.0, 0.04);
-        const vertGrad = Math.pow(1.0 - smoothstep(v, 0.04, 1.0), 1.35);
+        const vertGrad = Math.pow(1.0 - smoothstep(v, 0.24, 1.0), 1.08);
         const vProfile = topEdge * vertGrad;
         for (let x = 0; x < 128; x++) {
           const u = x / 127;
-          const hProfile = Math.pow(Math.sin(Math.PI * u), 1.15);
+          const streak = 0.88 + 0.12 * Math.sin(u * Math.PI * 5.0 + 0.4);
+          const hProfile = Math.pow(Math.sin(Math.PI * u), 0.58) * streak;
           const lum = Math.round(clamp(vProfile * hProfile, 0, 1) * 255);
           const o = (y * 128 + x) * 4;
           rImg.data[o] = lum;
@@ -953,7 +976,8 @@ float aqCausticPattern(vec2 xz, float t) {
       group.name = 'light-rays';
 
       const rays = configs.map((cfg, idx) => {
-        const geo = new THREE.PlaneGeometry(cfg.width, height);
+        const width = cfg.width * widthScale;
+        const geo = new THREE.PlaneGeometry(width, height);
         const mat = new THREE.MeshBasicMaterial({
           color: options.color ?? STYLE.rayColor,
           alphaMap: rayAlphaTex,
@@ -962,6 +986,7 @@ float aqCausticPattern(vec2 xz, float t) {
           blending: THREE.AdditiveBlending,
           depthWrite: false,
           side: THREE.DoubleSide,
+          fog: false,
         });
         const mesh = new THREE.Mesh(geo, mat);
         mesh.position.set(cfg.x, centerY, cfg.z);
@@ -970,7 +995,7 @@ float aqCausticPattern(vec2 xz, float t) {
         mesh.renderOrder = 3;
         mesh.name = `light-ray-${idx + 1}`;
         group.add(mesh);
-        return { mesh, cfg };
+        return { mesh, cfg, width };
       });
 
       const update = (elapsed) => {
@@ -986,6 +1011,117 @@ float aqCausticPattern(vec2 xz, float t) {
 
       update(0);
       return { group, rays, update };
+    }
+
+    // ===== 部品：背景グラデーション板 (buildBackdropGradient) =====
+    function buildBackdropGradient(options = {}) {
+      const width = options.width ?? STYLE.backdropWidth;
+      const height = options.height ?? STYLE.backdropHeight;
+      const centerY = options.centerY ?? STYLE.backdropCenterY;
+      const posZ = options.z ?? STYLE.backdropZ;
+      const topColor = options.topColor ?? STYLE.backdropTopColor;
+      const midColor = options.midColor ?? STYLE.backdropMidColor;
+      const bottomColor = options.bottomColor ?? STYLE.backdropBottomColor;
+      const midStop = options.midStop ?? STYLE.backdropMidStop;
+      const bottomStop = options.bottomStop ?? STYLE.backdropBottomStop;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 512;
+      const ctx = canvas.getContext('2d');
+      const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      grad.addColorStop(0.0, topColor);
+      grad.addColorStop(midStop, midColor);
+      grad.addColorStop(bottomStop, bottomColor);
+      grad.addColorStop(1.0, bottomColor);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // 両端の暗がり（上は明るく、下と両端が暗い目標写真トーンに合わせる）
+      const sideGrad = ctx.createLinearGradient(0, 0, canvas.width, 0);
+      sideGrad.addColorStop(0.0, 'rgba(2, 20, 46, 0.72)');
+      sideGrad.addColorStop(0.18, 'rgba(2, 20, 46, 0.0)');
+      sideGrad.addColorStop(0.82, 'rgba(2, 20, 46, 0.0)');
+      sideGrad.addColorStop(1.0, 'rgba(2, 20, 46, 0.72)');
+      ctx.fillStyle = sideGrad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // 水槽ガラス枠（y<=2.6, |x|<=4.5）の外側へはみ出ないよう外周を滑らかに透過
+      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const px = imgData.data;
+      const halfW = width * 0.5;
+      const halfH = height * 0.5;
+      for (let py = 0; py < canvas.height; py++) {
+        const wy = centerY + halfH - (py / (canvas.height - 1)) * height;
+        const topMask = 1.0 - smoothstep(wy, WATER_Y - 0.02, WATER_Y + 0.03);
+        for (let pxX = 0; pxX < canvas.width; pxX++) {
+          const wx = -halfW + (pxX / (canvas.width - 1)) * width;
+          const sideMask = 1.0 - smoothstep(Math.abs(wx), HALF_X - 0.02, HALF_X + 0.08);
+          const idx = (py * canvas.width + pxX) * 4;
+          px[idx + 3] = Math.round(255 * topMask * sideMask);
+        }
+      }
+      ctx.putImageData(imgData, 0, 0);
+
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+
+      const geo = new THREE.PlaneGeometry(width, height);
+      const mat = new THREE.MeshBasicMaterial({
+        map: tex,
+        transparent: true,
+        depthWrite: false,
+        fog: false,
+        side: THREE.FrontSide,
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(0, centerY, posZ);
+      mesh.renderOrder = -1;
+      mesh.name = 'backdrop-gradient';
+      return { mesh, material: mat, texture: tex };
+    }
+
+    // ===== 部品：水面の光だまり (buildSurfaceGlow) =====
+    function buildSurfaceGlow(options = {}) {
+      const tankW = options.tankW ?? TANK_W;
+      const tankD = options.tankD ?? TANK_D;
+      const posY = options.y ?? STYLE.surfaceGlowY;
+      const opacity = options.opacity ?? STYLE.surfaceGlowOpacity;
+      const centerColor = options.centerColor ?? STYLE.surfaceGlowCenterColor;
+      const midColor = options.midColor ?? STYLE.surfaceGlowMidColor;
+      const edgeColor = options.edgeColor ?? STYLE.surfaceGlowEdgeColor;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 256;
+      const ctx = canvas.getContext('2d');
+      const grad = ctx.createRadialGradient(128, 128, 4, 128, 128, 124);
+      grad.addColorStop(0.0, centerColor);
+      grad.addColorStop(0.45, midColor);
+      grad.addColorStop(1.0, edgeColor);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+
+      const geo = new THREE.PlaneGeometry(tankW, tankD);
+      // 下面（-Y）向きに回転し、水面より上から見た際は FrontSide で裏面カリングされる
+      geo.rotateX(Math.PI / 2);
+      const mat = new THREE.MeshBasicMaterial({
+        map: tex,
+        transparent: true,
+        opacity,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        side: THREE.FrontSide,
+        fog: false,
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(0, posY, 0);
+      mesh.renderOrder = 1;
+      mesh.name = 'surface-glow';
+      return { mesh, material: mat, texture: tex };
     }
 
     // ===== 砂床 (PlaneGeometry(9, 5.5, 90, 55)) =====
@@ -1182,6 +1318,9 @@ float aqCausticPattern(vec2 xz, float t) {
     }
 
     const grainTex = buildGrainTexture();
+    const backdrop = buildBackdropGradient();
+    scene.add(backdrop.mesh);
+
     const cabinet = buildCabinet({ grainTex });
     scene.add(cabinet.group);
 
@@ -1191,6 +1330,9 @@ float aqCausticPattern(vec2 xz, float t) {
     const rockResult = buildRocks(grainTex);
     const rockGroup = rockResult.group;
     scene.add(rockGroup);
+
+    const surfaceGlow = buildSurfaceGlow();
+    scene.add(surfaceGlow.mesh);
 
     const water = buildWaterSurface({ envMap: scene.environment });
     scene.add(water.mesh);
@@ -1366,7 +1508,7 @@ float aqCausticPattern(vec2 xz, float t) {
         }),
         rayMaterialInfo: () => lightRays.rays.map((r) => ({
           name: r.mesh.name,
-          width: r.cfg.width,
+          width: r.width,
           opacity: r.mesh.material.opacity,
           hasAlphaMap: Boolean(r.mesh.material.alphaMap),
         })),
@@ -1390,7 +1532,50 @@ float aqCausticPattern(vec2 xz, float t) {
           return { name: m.name, min: box.min.toArray(), max: box.max.toArray() };
         }),
       },
+      v3: {
+        get bgColor() {
+          return scene.background.getHex();
+        },
+        get rayCount() {
+          return lightRays.rays.length;
+        },
+        get rayWidths() {
+          return lightRays.rays.map((r) => r.width);
+        },
+        get rayOpacities() {
+          return lightRays.rays.map((r) => r.mesh.material.opacity);
+        },
+        get surfaceGlowOpacity() {
+          return surfaceGlow.mesh.material.opacity;
+        },
+        get backdropPresent() {
+          return Boolean(backdrop && backdrop.mesh && backdrop.mesh.parent === scene);
+        },
+      },
     };
+    Object.defineProperty(myaq.v3, 'detail', {
+      enumerable: false,
+      value: () => ({
+        fogDensity: STYLE.fogDensity,
+        exposure: renderer.toneMappingExposure,
+        hemiIntensity: STYLE.hemiIntensity,
+        hemiSkyColor: STYLE.hemiSkyColor,
+        sunIntensity: STYLE.sunIntensity,
+        sunColor: STYLE.sunColor,
+        sunPosition: STYLE.sunPosition,
+        rayBaseOpacity: STYLE.rayBaseOpacity,
+        rayOpacityMin: STYLE.rayOpacityMin,
+        rayOpacityMax: STYLE.rayOpacityMax,
+        rayWidthScale: STYLE.rayWidthScale,
+        causticsSandGain: STYLE.causticsSandGain,
+        backdropFog: backdrop.material.fog,
+        backdropPosition: backdrop.mesh.position.toArray(),
+        backdropSize: [STYLE.backdropWidth, STYLE.backdropHeight],
+        surfaceGlowY: surfaceGlow.mesh.position.y,
+        surfaceGlowSide: surfaceGlow.material.side,
+        surfaceGlowBlending: surfaceGlow.material.blending,
+      }),
+    });
     window.__MYAQ = myaq;
 
     // ===== 群れ・遊泳制御 =====
