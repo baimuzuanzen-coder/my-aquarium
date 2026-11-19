@@ -1,0 +1,3801 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>俺だけの水族館</title>
+  <link rel="icon" href="data:," />
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #03070e;
+      color: #eef6fb;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Noto Sans JP", sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+    .hud-panel {
+      position: fixed;
+      z-index: 10;
+      background: rgba(4, 12, 24, 0.72);
+      border: 1px solid rgba(155, 210, 248, 0.18);
+      border-radius: 12px;
+      color: #eef6fb;
+    }
+    #hud-top-left {
+      top: 16px;
+      left: 16px;
+      padding: 10px 14px;
+      pointer-events: none;
+    }
+    #hud-top-left h1 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      line-height: 1.25;
+    }
+    #resident-meta {
+      margin-top: 3px;
+      font-size: 12px;
+      color: rgba(215, 236, 248, 0.78);
+    }
+    #hud-hint {
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      padding: 7px 14px;
+      font-size: 12px;
+      color: rgba(225, 242, 252, 0.82);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    #hud-controls {
+      right: 16px;
+      bottom: 16px;
+      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      pointer-events: auto;
+    }
+    .ctrl-label {
+      font-size: 12px;
+      color: rgba(215, 236, 248, 0.8);
+      padding: 0 4px;
+      white-space: nowrap;
+    }
+    .btn {
+      appearance: none;
+      border: 1px solid rgba(165, 216, 248, 0.24);
+      background: rgba(14, 38, 62, 0.72);
+      color: #eef6fb;
+      font: inherit;
+      font-size: 12.5px;
+      font-weight: 500;
+      line-height: 1.2;
+      padding: 7px 11px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+      white-space: nowrap;
+    }
+    .btn:hover:not(:disabled) {
+      background: rgba(26, 68, 106, 0.86);
+      border-color: rgba(165, 216, 248, 0.45);
+    }
+    .btn:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+    .btn.is-on {
+      background: rgba(34, 102, 152, 0.80);
+      border-color: rgba(135, 212, 250, 0.55);
+    }
+    .sep {
+      width: 1px;
+      height: 20px;
+      background: rgba(180, 224, 245, 0.2);
+      margin: 0 2px;
+    }
+    #status-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    #status-overlay.hidden {
+      display: none;
+    }
+    #status-box {
+      padding: 12px 18px;
+      border-radius: 10px;
+      background: rgba(4, 14, 26, 0.82);
+      border: 1px solid rgba(180, 224, 245, 0.25);
+      font-size: 13px;
+      color: #dceff9;
+      max-width: min(480px, calc(100vw - 32px));
+      text-align: center;
+    }
+    #status-box.error {
+      border-color: rgba(255, 130, 120, 0.55);
+      color: #ffd4cf;
+    }
+    @media (max-width: 820px) {
+      #hud-hint {
+        bottom: 64px;
+        font-size: 11px;
+        max-width: calc(100vw - 24px);
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      #hud-controls {
+        right: 12px;
+        bottom: 12px;
+        padding: 6px 8px;
+      }
+      #hud-top-left {
+        top: 12px;
+        left: 12px;
+      }
+    }
+  </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./vendor/three/three.module.js",
+      "three/addons/": "./vendor/three/addons/",
+      "three/addons/loaders/GLTFLoader.js": "./addons/loaders/GLTFLoader.js",
+      "three/addons/controls/OrbitControls.js": "./addons/controls/OrbitControls.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="hud-top-left" class="hud-panel">
+    <h1>俺だけの水族館</h1>
+    <div id="resident-meta">住人：<span id="resident-total">--</span> 匹</div>
+  </div>
+
+  <div id="hud-hint" class="hud-panel">ドラッグ：見回す　ホイール：寄る・引く　自動でゆっくり漂います</div>
+
+  <div id="hud-controls" class="hud-panel">
+    <span class="ctrl-label" id="school-label">群れ 42</span>
+    <button type="button" class="btn" id="btn-school-dec" aria-label="群れを減らす">群れ −</button>
+    <button type="button" class="btn" id="btn-school-inc" aria-label="群れを増やす">群れ ＋</button>
+    <div class="sep" aria-hidden="true"></div>
+    <button type="button" class="btn is-on" id="btn-auto-cam" aria-pressed="true">自動カメラ ON</button>
+  </div>
+
+  <div id="status-overlay">
+    <div id="status-box">水槽と生き物を読み込み中…</div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+    import { loadFish, createFish } from './vendor/fish-kit/fish-kit.js';
+    import { loadSquids, createSquid } from './vendor/squid-kit/squid-kit.js';
+    import { createSardine } from './vendor/my/sardine/sardine.js';
+
+    // ===== 定数（水槽寸法：9m × 5.5m, 水面 y=2.6） =====
+    const TANK_W = 9;
+    const TANK_D = 5.5;
+    const HALF_X = TANK_W / 2;   // 4.5
+    const HALF_Z = TANK_D / 2;   // 2.75
+    const WATER_Y = 2.6;
+
+    // ===== 見た目設定 STYLE（v6 流用要件：数値全集約・本編差し替え前提） =====
+    const STYLE = {
+      // 暗い展示室背景・水中フォグ・照明・露出・カメラ（v6：部屋は暗く、水槽内だけ青く明るい）
+      bgColor: 0x03070e,
+      fogColor: 0x042663,
+      fogDensity: 0.032,
+      hemiSkyColor: 0x62b4ff,
+      hemiGroundColor: 0x04142c,
+      hemiIntensity: 0.74,
+      sunColor: 0xeef8ff,
+      sunIntensity: 2.35,
+      sunPosition: [1.2, 9.2, 2.8],
+      fillColor: 0x8cc8ff,
+      fillIntensity: 0.68,
+      fillPosition: [0.0, 3.6, 6.4],
+      rimColor: 0x3b9eff,
+      rimIntensity: 0.95,
+      rimPosition: [2.6, 6.4, -3.6],
+      spotColor: 0xdff5ff,
+      spotIntensity: 48.0,
+      spotDistance: 12.5,
+      spotAngle: 0.68,
+      spotPenumbra: 0.85,
+      spotPosition: [0.0, 5.2, 0.40],
+      spotTarget: [0.0, 0.0, 0.55],
+      environmentIntensity: 0.56,
+      exposure: 1.16,
+      cameraFov: 44,
+      cameraPosition: [0.18, 1.24, 9.45],
+      cameraTarget: [0.0, 1.02, 0.10],
+      controlsMinDistance: 1.2,
+      controlsMaxDistance: 12.5,
+
+      // 暗い鑑賞空間（展示室フロア・天井・外周壁、すべて fog: false）
+      roomRadius: 22.0,
+      roomFloorY: -1.05,
+      roomCeilingY: 4.8,
+      roomWallColor: 0x02050a,
+      roomCeilingColor: 0x03060c,
+      roomFloorColor: 0x060a11,
+      roomFloorSpillColor: 'rgba(18, 92, 184, 0.38)',
+      roomFloorSpillCore: 'rgba(42, 138, 226, 0.26)',
+
+      // 水中ボリューム囲い（v6：背面＋左右＋前面の内向き 4 面シェーダ、FrontSide で手前面を自動カリング）
+      backdropWidth: 9.0,
+      backdropHeight: 2.6,
+      backdropCenterY: 1.3,
+      backdropZ: -2.742,
+      backdropInset: 0.008,
+      backdropTopColor: '#1672d4',
+      backdropMidColor: '#053184',
+      backdropBottomColor: '#010d24',
+      backdropLightPoolColor: '#2ea4ff',
+      backdropMidStop: 0.40,
+      backdropBottomStop: 0.78,
+      backdropSideDarken: 0.76,
+
+      // 水中光減衰（物理レイ-AABB 水中距離による Beer-Lambert 吸収＋深度ブルー散乱）
+      underwaterAbsorb: [0.28, 0.12, 0.042],
+      underwaterScatterRate: 0.19,
+      underwaterDeepColor: 0x021233,
+      underwaterShallowColor: 0x073b94,
+
+      // 水面の光だまり（水面下 y=2.57、下面からのみ可視：スネルの窓＋波紋きらめき）
+      surfaceGlowY: 2.57,
+      surfaceGlowOpacity: 0.90,
+      surfaceGlowCenterColor: '#8ee4ff',
+      surfaceGlowMidColor: '#0d56ba',
+      surfaceGlowEdgeColor: '#02122e',
+
+      // 筐体：暗い展示台座・砂側面・ガラス・枠（fog: false で部屋側の黒を維持）
+      pedestalWidth: 9.7,
+      pedestalHeight: 1.0,
+      pedestalDepth: 6.2,
+      pedestalCenterY: -0.55,
+      pedestalColor: 0x0b1017,
+      pedestalRoughness: 0.86,
+      pedestalMetalness: 0.08,
+      pedestalTrimColor: 0x16202b,
+      pedestalTrimWidth: 0.09,
+      pedestalTrimHeight: 0.035,
+      pedestalTrimRoughness: 0.50,
+      pedestalTrimMetalness: 0.42,
+
+      sandSideHeight: 0.22,
+      sandSideCenterY: -0.11,
+      sandSideColor: 0x5c503c,
+      sandSideRoughness: 0.96,
+      sandSideBumpScale: 0.14,
+      sandSideBumpRepeat: [24, 0.6],
+
+      glassOpacity: 0.042,
+      glassColor: 0x9ac6dc,
+      glassRoughness: 0.09,
+      glassMetalness: 0.02,
+      glassEnvMapIntensity: 0.22,
+
+      waterColor: 0x7cd6ff,
+      waterOpacity: 0.20,
+      waterRoughness: 0.12,
+      waterMetalness: 0.14,
+      waterEnvMapIntensity: 0.62,
+      waterBumpScale: 0.055,
+
+      frameThickness: 0.095,
+      frameColor: 0x0d131a,
+      frameRoughness: 0.44,
+      frameMetalness: 0.72,
+
+      // 粒子：マリンスノー（2層: 本体 1500 + ボケ 100、水槽外 0 個厳守）
+      particleCount: 1600,
+      particleMainCount: 1500,
+      particleMainColor: 0xd4ecfa,
+      particleMainSize: 0.020,
+      particleMainOpacity: 0.28,
+      particleBokehCount: 100,
+      particleBokehColor: 0xc2e6ff,
+      particleBokehSize: 0.095,
+      particleBokehOpacity: 0.09,
+      particleMarginX: 0.12,
+      particleMarginZ: 0.12,
+      particleSpawnMinY: 0.08,
+      particleMinY: 0.06,
+      particleMaxY: 2.54,
+      particleSpeedMin: 0.015,
+      particleSpeedMax: 0.048,
+      particleSwayAmp: 0.045,
+      particleSwayFreqMin: 0.35,
+      particleSwayFreqMax: 0.75,
+
+      // コースティクス（砂・岩・沈んだ構造物へ適用）
+      causticsColor: 0xc8eeff,
+      causticsScale1: 5.2,
+      causticsScale2: 9.8,
+      causticsSpeed1: 0.58,
+      causticsSpeed2: 0.88,
+      causticsPow: 4.4,
+      causticsSandGain: 0.30,
+      causticsSandRadiusX: 3.8,
+      causticsSandRadiusZ: 2.4,
+      causticsSandInner: 0.28,
+      causticsSandOuter: 1.05,
+      causticsRockGain: 0.20,
+
+      // 砂・岩の質感（v6：瀬戸内海水槽の明るい貝殻砂利＋暗赤褐色＆苔の岩礁）
+      grainTexSize: 256,
+      sandTexSize: 512,
+      rockTexSize: 512,
+      propTexSize: 256,
+      sandBaseColor: 0xc7bc9d,
+      sandShadeVariance: 0.11,
+      sandBumpScale: 0.18,
+      sandBumpRepeat: [12, 8],
+      sandContactShadowStrength: 0.56,
+
+      rockBaseColor: 0x68382c,
+      rockMossColor: 0x356924,
+      rockCorallineColor: 0x7e2b2a,
+      rockHighlightColor: 0x9b8674,
+      rockColorVariance: 0.18,
+      rockCreviceMin: 0.42,
+      rockDispMax: 0.26,
+      rockHeroDispMax: 0.30,
+      rockStrataAmp: 0.075,
+      rockRoughness: 0.90,
+      rockBumpScale: 0.44,
+      rockBumpRepeat: [4, 4],
+
+      // 岩礁配置（favorite-01.png 準拠：左崖・手前主役岩・奥岩礁帯・右岬、魚巡回帯 |x|<3.45 & |z|<1.75 & y>0.36 を完全回避）
+      rockConfigs: [
+        // 1-4: 左の切り立った岩礁崖（x <= -3.50）
+        { name: 'rock-cliff-left-back',  x: -3.96, z: -2.18, r: 0.90, sx: 0.62, sy: 2.12, sz: 0.72, ry: 0.35, seed: 101, detail: 4, strata: 1.15, moss: 0.85, hero: true },
+        { name: 'rock-cliff-left-mid',   x: -4.02, z: -0.92, r: 0.84, sx: 0.56, sy: 1.70, sz: 1.02, ry: 1.42, seed: 113, detail: 4, strata: 1.25, moss: 0.80, hero: true },
+        { name: 'rock-cliff-left-front', x: -3.98, z:  0.48, r: 0.80, sx: 0.56, sy: 1.22, sz: 1.00, ry: 2.35, seed: 127, detail: 3, strata: 1.00, moss: 0.75, hero: true },
+        { name: 'rock-cliff-left-foot',  x: -3.92, z:  1.86, r: 0.64, sx: 0.78, sy: 0.78, sz: 0.92, ry: 3.90, seed: 139, detail: 3, strata: 0.75, moss: 0.70 },
+
+        // 5-9: 奥の岩礁パノラマ帯（z <= -1.80、中央奥〜右上を下げて深い青い水の抜けを作る）
+        { name: 'rock-back-left-terrace', x: -2.86, z: -2.28, r: 0.84, sx: 1.08, sy: 1.54, sz: 0.54, ry: 0.62, seed: 151, detail: 4, strata: 1.10, moss: 0.70, hero: true },
+        { name: 'rock-back-left-slope',   x: -1.56, z: -2.32, r: 0.76, sx: 1.14, sy: 1.12, sz: 0.52, ry: 1.85, seed: 163, detail: 3, strata: 0.95, moss: 0.65 },
+        { name: 'rock-back-center-ridge', x: -0.15, z: -2.34, r: 0.70, sx: 1.24, sy: 0.88, sz: 0.50, ry: 2.75, seed: 179, detail: 3, strata: 0.85, moss: 0.60 },
+        { name: 'rock-back-right-shelf',  x:  1.28, z: -2.36, r: 0.66, sx: 1.12, sy: 0.74, sz: 0.48, ry: 4.10, seed: 193, detail: 3, strata: 0.80, moss: 0.55 },
+        { name: 'rock-back-right-buttress', x: 2.72, z: -2.30, r: 0.78, sx: 1.08, sy: 1.18, sz: 0.52, ry: 5.05, seed: 211, detail: 4, strata: 1.05, moss: 0.68, hero: true },
+
+        // 10-12: 右の岩礁岬（x >= 3.52）
+        { name: 'rock-cliff-right-back',  x:  3.96, z: -2.14, r: 0.84, sx: 0.62, sy: 1.66, sz: 0.74, ry: 0.95, seed: 227, detail: 4, strata: 1.15, moss: 0.72, hero: true },
+        { name: 'rock-cliff-right-mid',   x:  4.02, z: -0.78, r: 0.76, sx: 0.55, sy: 1.22, sz: 1.00, ry: 2.18, seed: 239, detail: 3, strata: 1.00, moss: 0.65 },
+        { name: 'rock-cliff-right-front', x:  3.95, z:  0.80, r: 0.70, sx: 0.56, sy: 0.88, sz: 1.00, ry: 3.45, seed: 251, detail: 3, strata: 0.85, moss: 0.62 },
+
+        // 13-15: 手前の主役岩礁（favorite-01.png の主役ドーム岩＋右奥の副岩、z >= 1.80 に収める）
+        { name: 'rock-hero-center',       x: -0.22, z:  2.14, r: 0.74, sx: 1.14, sy: 1.04, sz: 0.52, ry: 0.28, seed: 307, detail: 4, strata: 0.70, moss: 1.00, hero: true, fgGuard: true },
+        { name: 'rock-hero-shoulder',     x:  0.42, z:  2.22, r: 0.48, sx: 1.04, sy: 0.82, sz: 0.50, ry: 2.15, seed: 317, detail: 3, strata: 0.65, moss: 0.88, fgGuard: true },
+        { name: 'rock-fg-right-mound',    x:  2.52, z:  2.18, r: 0.66, sx: 1.08, sy: 0.84, sz: 0.56, ry: 4.35, seed: 331, detail: 4, strata: 0.80, moss: 0.85, hero: true, fgGuard: true },
+
+        // 16-17: 砂床の低い平岩（y <= 0.28m、全魚種の遊泳帯の下に完全に収める）
+        { name: 'rock-floor-low-left',    x: -1.90, z:  0.58, r: 0.52, sx: 1.22, sy: 0.40, sz: 0.92, ry: 1.12, seed: 353, detail: 3, strata: 0.45, moss: 0.60, lowFloor: true },
+        { name: 'rock-floor-low-right',   x:  2.20, z: -0.68, r: 0.48, sx: 1.15, sy: 0.38, sz: 0.90, ry: 3.70, seed: 367, detail: 3, strata: 0.40, moss: 0.55, lowFloor: true },
+      ],
+
+      // 光の柱（v6：水面から太く降り注ぐ 5 本のボリューム光柱＋揺らめく筋模様）
+      rayCount: 5,
+      rayWidthScale: 1.95,
+      rayColor: 0x9ee6ff,
+      rayHeight: 2.65,
+      rayCenterY: 1.32,
+      rayBaseOpacity: 0.22,
+      rayOpacityMin: 0.16,
+      rayOpacityMax: 0.28,
+      rayMaxOpacity: 0.32,
+      rayTiltZ: 0.15,
+      raySwayAmp: 0.018,
+      rayConfigs: [
+        { x: -1.65, z:  0.10, width: 1.18, topR: 0.44, botR: 1.02, tiltZ: -0.11, tiltX:  0.04, rotY:  0.20, period: 21.0, phase: 0.4, boost: 0.95 },
+        { x: -0.05, z: -0.15, width: 1.52, topR: 0.58, botR: 1.28, tiltZ: -0.14, tiltX:  0.05, rotY: -0.08, period: 26.0, phase: 1.3, boost: 1.25 },
+        { x:  1.42, z: -0.42, width: 1.38, topR: 0.50, botR: 1.14, tiltZ: -0.17, tiltX:  0.06, rotY:  0.14, period: 29.5, phase: 2.4, boost: 1.12 },
+        { x:  0.62, z: -1.18, width: 1.22, topR: 0.44, botR: 0.98, tiltZ: -0.15, tiltX: -0.04, rotY: -0.18, period: 24.5, phase: 3.9, boost: 0.92 },
+        { x:  2.78, z: -0.72, width: 1.08, topR: 0.38, botR: 0.86, tiltZ: -0.19, tiltX:  0.05, rotY:  0.26, period: 32.0, phase: 5.1, boost: 0.86 },
+      ],
+
+      // 群れ隊形（v6：密度感のあるベイトボール／トルネードの気配＋光柱の下を回遊）
+      schoolRadiusX: 0.54,
+      schoolRadiusY: 0.32,
+      schoolRadiusZ: 0.36,
+      schoolDensityPow: 0.80,
+      schoolScaleExp: 0.22,
+      schoolMinSlotGap: 0.100,
+      schoolBaseCount: 42,
+      schoolCohesion: 3.2,
+      schoolSpeedGain: 1.30,
+      schoolAlignLead: 0.78,
+      schoolMinForwardBias: 0.22,
+      schoolSeparationDist: 0.125,
+      schoolSeparationMinDist: 0.088,
+      schoolSeparationWeight: 0.44,
+      schoolSeparationSpeedGain: 0.85,
+      schoolWobbleAmp: 0.034,
+      schoolWobbleFreq: 0.62,
+      schoolSwirlRate: 0.28,
+      schoolMinSpeed: 0.07,
+      schoolMaxSpeed: 0.55,
+      schoolGoalRangeX: 1.45,
+      schoolGoalCenterY: 1.48,
+      schoolGoalRangeY: 0.14,
+      schoolGoalRangeZ: 0.65,
+      sardineMetalness: 0.82,
+      sardineRoughness: 0.15,
+    };
+
+    const BG_COLOR = STYLE.bgColor;
+
+    const SCHOOL_STEP = 6;
+    const SCHOOL_MIN = 12;
+    const SCHOOL_MAX = 78;
+    const INITIAL_SCHOOL_COUNT = 42;
+    const MAX_TURN_RATE = 0.9;
+
+    const FISH_SPECS = {
+      katakuchi: { zoneCenter: 1.5,  zoneHalf: 0.45, speed: 0.35 },
+      aji:       { zoneCenter: 1.35, zoneHalf: 0.5,  speed: 0.30, lengthCm: 25, count: 5 },
+      madai:     { zoneCenter: 0.8,  zoneHalf: 0.4,  speed: 0.22, lengthCm: 45, count: 2 },
+      kurodai:   { zoneCenter: 0.8,  zoneHalf: 0.4,  speed: 0.22, lengthCm: 40, count: 2 },
+      buri:      { zoneCenter: 1.2,  zoneHalf: 0.55, speed: 0.55, lengthCm: 85, count: 2 },
+    };
+
+    const { clamp, smoothstep } = THREE.MathUtils;
+
+    // ===== 決定論的ノイズ =====
+    function hash2(ix, iz, seed = 0) {
+      const n = Math.sin(ix * 127.1 + iz * 311.7 + seed * 74.7) * 43758.5453123;
+      return n - Math.floor(n);
+    }
+
+    function valueNoise2D(x, z, seed = 0) {
+      const ix = Math.floor(x);
+      const iz = Math.floor(z);
+      const fx = x - ix;
+      const fz = z - iz;
+      const ux = fx * fx * (3 - 2 * fx);
+      const uz = fz * fz * (3 - 2 * fz);
+      const a = hash2(ix, iz, seed);
+      const b = hash2(ix + 1, iz, seed);
+      const c = hash2(ix, iz + 1, seed);
+      const d = hash2(ix + 1, iz + 1, seed);
+      return a + (b - a) * ux + (c - a) * uz + (a - b - c + d) * ux * uz;
+    }
+
+    function fbm2D(x, z, seed = 0) {
+      let val = 0;
+      let amp = 0.5;
+      let freq = 1;
+      for (let i = 0; i < 3; i++) {
+        val += (valueNoise2D(x * freq, z * freq, seed + i * 19) * 2 - 1) * amp;
+        freq *= 2.05;
+        amp *= 0.5;
+      }
+      return val;
+    }
+
+    function hash3(ix, iy, iz, seed = 0) {
+      const n = Math.sin(ix * 127.1 + iy * 311.7 + iz * 191.999 + seed * 53.3) * 43758.5453123;
+      return n - Math.floor(n);
+    }
+
+    function valueNoise3D(x, y, z, seed = 0) {
+      const ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z);
+      const fx = x - ix, fy = y - iy, fz = z - iz;
+      const ux = fx * fx * (3 - 2 * fx);
+      const uy = fy * fy * (3 - 2 * fy);
+      const uz = fz * fz * (3 - 2 * fz);
+      const lerp = (a, b, t) => a + (b - a) * t;
+      const c000 = hash3(ix, iy, iz, seed);
+      const c100 = hash3(ix + 1, iy, iz, seed);
+      const c010 = hash3(ix, iy + 1, iz, seed);
+      const c110 = hash3(ix + 1, iy + 1, iz, seed);
+      const c001 = hash3(ix, iy, iz + 1, seed);
+      const c101 = hash3(ix + 1, iy, iz + 1, seed);
+      const c011 = hash3(ix, iy + 1, iz + 1, seed);
+      const c111 = hash3(ix + 1, iy + 1, iz + 1, seed);
+      const x00 = lerp(c000, c100, ux);
+      const x10 = lerp(c010, c110, ux);
+      const x01 = lerp(c001, c101, ux);
+      const x11 = lerp(c011, c111, ux);
+      return lerp(lerp(x00, x10, uy), lerp(x01, x11, uy), uz);
+    }
+
+    function wrapAngle(a) {
+      let r = (a + Math.PI) % (Math.PI * 2);
+      if (r < 0) r += Math.PI * 2;
+      return r - Math.PI;
+    }
+
+    function makePrng(seedInit) {
+      let seed = seedInit >>> 0;
+      return () => {
+        seed = (seed * 1664525 + 1013904223) >>> 0;
+        return seed / 4294967296;
+      };
+    }
+
+    // ===== 砂床高さの評価関数（岩・沈んだ物の設置基準＆浮きゼロ保証に共用） =====
+    function sampleSandHeight(x, z) {
+      const fadeX = smoothstep(HALF_X - Math.abs(x), 0, 0.55);
+      const fadeZ = smoothstep(HALF_Z - Math.abs(z), 0, 0.45);
+      const edgeFade = fadeX * fadeZ;
+      const ripple = Math.sin(x * 2.4 + Math.sin(z * 1.1) * 0.9) * 0.45
+                   + Math.sin(x * 5.2 - z * 2.1) * 0.18;
+      const n = clamp(fbm2D(x * 0.85, z * 0.85, 3) * 0.68 + ripple * 0.42, -1, 1);
+      return n * 0.052 * edgeFade;
+    }
+
+    // ===== 部品：水族館専用 PMREM 環境マップ (buildAquariumEnvMap) =====
+    // 上方からメタハラ照明・側面に深いコバルト青を映し込み、イワシの銀鱗や水面のきらめきを引き出す
+    function buildAquariumEnvMap(rendererRef) {
+      const pmrem = new THREE.PMREMGenerator(rendererRef);
+      const envScene = new THREE.Scene();
+
+      // 深海ドーム背景
+      const domeGeo = new THREE.SphereGeometry(18, 24, 16);
+      const domeMat = new THREE.MeshBasicMaterial({ color: 0x052862, side: THREE.BackSide });
+      envScene.add(new THREE.Mesh(domeGeo, domeMat));
+
+      // 上面の明るいスカイライト帯（魚の上側銀鱗に強いハイライトを与える）
+      const skyMat = new THREE.MeshBasicMaterial({ color: 0x1e84e8, side: THREE.DoubleSide });
+      const skyDisc = new THREE.Mesh(new THREE.CircleGeometry(14, 24), skyMat);
+      skyDisc.rotation.x = Math.PI / 2;
+      skyDisc.position.y = 8.5;
+      envScene.add(skyDisc);
+
+      // 天井のスポットライト発光パネル 5 枚（イワシの群れが翻るたびに銀閃光を生む）
+      const panelMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(3.2, 4.2, 4.8) });
+      const panelXs = [-4.2, -1.8, 0.2, 2.2, 4.4];
+      for (let i = 0; i < panelXs.length; i++) {
+        const p = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 3.2), panelMat);
+        p.rotation.x = Math.PI / 2;
+        p.position.set(panelXs[i], 7.4, i % 2 === 0 ? -0.6 : 0.6);
+        envScene.add(p);
+      }
+
+      // 中層の青い横照り返し
+      const sideGlowMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.22, 0.72, 1.55), side: THREE.DoubleSide });
+      const sideA = new THREE.Mesh(new THREE.PlaneGeometry(16, 4.5), sideGlowMat);
+      sideA.position.set(0, 2.2, -10);
+      envScene.add(sideA);
+      const sideB = new THREE.Mesh(new THREE.PlaneGeometry(16, 3.8), sideGlowMat);
+      sideB.position.set(0, 2.0, 10);
+      sideB.rotation.y = Math.PI;
+      envScene.add(sideB);
+
+      // 暗い底面反射
+      const botMat = new THREE.MeshBasicMaterial({ color: 0x031126, side: THREE.DoubleSide });
+      const botDisc = new THREE.Mesh(new THREE.CircleGeometry(14, 20), botMat);
+      botDisc.rotation.x = -Math.PI / 2;
+      botDisc.position.y = -6.0;
+      envScene.add(botDisc);
+
+      const rt = pmrem.fromScene(envScene, 0.035);
+      envScene.traverse((o) => {
+        if (o.isMesh) {
+          o.geometry.dispose();
+          o.material.dispose();
+        }
+      });
+      pmrem.dispose();
+      return rt.texture;
+    }
+
+    // ===== レンダラ・シーン・環境・照明・カメラ =====
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = STYLE.exposure;
+    document.body.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(BG_COLOR);
+    scene.fog = new THREE.FogExp2(STYLE.fogColor, STYLE.fogDensity);
+
+    // RoomEnvironment を fallback として保持しつつ、水族館専用の水中照明 PMREM を適用
+    const aquariumEnvTex = typeof RoomEnvironment === 'function'
+      ? buildAquariumEnvMap(renderer)
+      : null;
+    scene.environment = aquariumEnvTex;
+    if ('environmentIntensity' in scene) {
+      scene.environmentIntensity = STYLE.environmentIntensity;
+    }
+
+    const hemiLight = new THREE.HemisphereLight(STYLE.hemiSkyColor, STYLE.hemiGroundColor, STYLE.hemiIntensity);
+    scene.add(hemiLight);
+
+    const sunLight = new THREE.DirectionalLight(STYLE.sunColor, STYLE.sunIntensity);
+    sunLight.position.set(...STYLE.sunPosition);
+    scene.add(sunLight);
+
+    const fillLight = new THREE.DirectionalLight(STYLE.fillColor, STYLE.fillIntensity);
+    fillLight.position.set(...STYLE.fillPosition);
+    scene.add(fillLight);
+
+    const rimLight = new THREE.DirectionalLight(STYLE.rimColor, STYLE.rimIntensity);
+    rimLight.position.set(...STYLE.rimPosition);
+    scene.add(rimLight);
+
+    const poolSpot = new THREE.SpotLight(
+      STYLE.spotColor,
+      STYLE.spotIntensity,
+      STYLE.spotDistance,
+      STYLE.spotAngle,
+      STYLE.spotPenumbra,
+      2.0
+    );
+    poolSpot.position.set(...STYLE.spotPosition);
+    poolSpot.target.position.set(...STYLE.spotTarget);
+    scene.add(poolSpot);
+    scene.add(poolSpot.target);
+
+    const camera = new THREE.PerspectiveCamera(STYLE.cameraFov, window.innerWidth / window.innerHeight, 0.05, 80);
+    camera.position.set(...STYLE.cameraPosition);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(...STYLE.cameraTarget);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = -0.28;
+    controls.minDistance = STYLE.controlsMinDistance;
+    controls.maxDistance = STYLE.controlsMaxDistance;
+    controls.maxPolarAngle = Math.PI * 0.54;
+    controls.update();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // ===== 手続き生成テクスチャ群（粒・貝殻砂利・岩礁肌・沈んだ構造物・水面波紋） =====
+    function buildGrainTexture(size = STYLE.grainTexSize) {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const img = ctx.createImageData(size, size);
+      const data = img.data;
+      const rand = makePrng(133791);
+      for (let i = 0; i < size * size; i++) {
+        const v = Math.floor(92 + rand() * 72);
+        const o = i * 4;
+        data[o] = v;
+        data[o + 1] = v;
+        data[o + 2] = v;
+        data[o + 3] = 255;
+      }
+      ctx.putImageData(img, 0, 0);
+      const count2px = Math.floor(size * size * 0.22);
+      for (let i = 0; i < count2px; i++) {
+        const gx = Math.floor(rand() * size);
+        const gy = Math.floor(rand() * size);
+        const shade = rand() > 0.5 ? Math.floor(175 + rand() * 75) : Math.floor(25 + rand() * 65);
+        ctx.fillStyle = `rgb(${shade},${shade},${shade})`;
+        ctx.fillRect(gx, gy, 2, 2);
+      }
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.anisotropy = 4;
+      return tex;
+    }
+
+    function cloneTextureWithRepeat(baseTex, rx, ry) {
+      const t = baseTex.clone();
+      t.wrapS = THREE.RepeatWrapping;
+      t.wrapT = THREE.RepeatWrapping;
+      t.repeat.set(rx, ry);
+      t.needsUpdate = true;
+      return t;
+    }
+
+    // 瀬戸内海の粗い貝殻混じり砂利テクスチャ（アルベド＋凹凸バンプ）
+    function buildSandTexture(size = STYLE.sandTexSize) {
+      const cMap = document.createElement('canvas');
+      cMap.width = size;
+      cMap.height = size;
+      const ctx = cMap.getContext('2d');
+
+      const cBump = document.createElement('canvas');
+      cBump.width = size;
+      cBump.height = size;
+      const bCtx = cBump.getContext('2d');
+
+      const rand = makePrng(44219);
+      ctx.fillStyle = '#c8be9f';
+      ctx.fillRect(0, 0, size, size);
+      bCtx.fillStyle = '#808080';
+      bCtx.fillRect(0, 0, size, size);
+
+      const img = ctx.getImageData(0, 0, size, size);
+      const bImg = bCtx.getImageData(0, 0, size, size);
+      const d = img.data;
+      const bd = bImg.data;
+      for (let i = 0; i < size * size; i++) {
+        const r1 = rand();
+        const delta = (r1 - 0.5) * 44;
+        const o = i * 4;
+        d[o] = clamp(Math.round(202 + delta), 120, 245);
+        d[o + 1] = clamp(Math.round(191 + delta * 0.94), 112, 238);
+        d[o + 2] = clamp(Math.round(158 + delta * 0.85), 90, 212);
+        d[o + 3] = 255;
+
+        const bv = clamp(Math.round(128 + delta * 2.1), 20, 235);
+        bd[o] = bd[o + 1] = bd[o + 2] = bv;
+        bd[o + 3] = 255;
+      }
+      ctx.putImageData(img, 0, 0);
+      bCtx.putImageData(bImg, 0, 0);
+
+      // 粗い小石・貝殻片・黒粒を重ねて favorite-01.png の砂利粒感を作る
+      const pebbleCount = Math.floor(size * size * 0.045);
+      for (let i = 0; i < pebbleCount; i++) {
+        const px = rand() * size;
+        const py = rand() * size;
+        const rad = 0.8 + rand() * 2.4;
+        const kind = rand();
+        if (kind < 0.36) {
+          // 明るい貝殻片
+          ctx.fillStyle = `rgba(238, 232, 212, ${0.48 + rand() * 0.42})`;
+          bCtx.fillStyle = `rgba(225, 225, 225, 0.72)`;
+        } else if (kind < 0.70) {
+          // 暗灰・赤茶の砂利粒
+          ctx.fillStyle = `rgba(${78 + Math.floor(rand() * 38)}, ${66 + Math.floor(rand() * 32)}, ${52 + Math.floor(rand() * 24)}, ${0.42 + rand() * 0.40})`;
+          bCtx.fillStyle = `rgba(48, 48, 48, 0.75)`;
+        } else {
+          // 温かみのある黄土砂粒
+          ctx.fillStyle = `rgba(176, 152, 114, ${0.40 + rand() * 0.35})`;
+          bCtx.fillStyle = `rgba(170, 170, 170, 0.60)`;
+        }
+        ctx.beginPath();
+        ctx.arc(px, py, rad, 0, Math.PI * 2);
+        ctx.fill();
+        bCtx.beginPath();
+        bCtx.arc(px, py, rad, 0, Math.PI * 2);
+        bCtx.fill();
+      }
+
+      const map = new THREE.CanvasTexture(cMap);
+      map.colorSpace = THREE.SRGBColorSpace;
+      map.wrapS = THREE.RepeatWrapping;
+      map.wrapT = THREE.RepeatWrapping;
+      map.repeat.set(...STYLE.sandBumpRepeat);
+      map.anisotropy = 4;
+
+      const bump = new THREE.CanvasTexture(cBump);
+      bump.wrapS = THREE.RepeatWrapping;
+      bump.wrapT = THREE.RepeatWrapping;
+      bump.repeat.set(...STYLE.sandBumpRepeat);
+      bump.anisotropy = 4;
+
+      return { map, bump };
+    }
+
+    // 岩礁肌テクスチャ（暗赤褐色の石灰藻・苔斑・深い割れ目・フジツボ白斑）
+    function buildRockTexture(size = STYLE.rockTexSize) {
+      const cMap = document.createElement('canvas');
+      cMap.width = size;
+      cMap.height = size;
+      const ctx = cMap.getContext('2d');
+
+      const cBump = document.createElement('canvas');
+      cBump.width = size;
+      cBump.height = size;
+      const bCtx = cBump.getContext('2d');
+
+      const rand = makePrng(77813);
+      ctx.fillStyle = '#c8c0ba';
+      ctx.fillRect(0, 0, size, size);
+      bCtx.fillStyle = '#808080';
+      bCtx.fillRect(0, 0, size, size);
+
+      // 層状の岩目と暗部斑
+      for (let i = 0; i < 650; i++) {
+        const x = rand() * size;
+        const y = rand() * size;
+        const rx = 6 + rand() * 34;
+        const ry = 3 + rand() * 14;
+        const rot = (rand() - 0.5) * 0.55;
+        const kind = rand();
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rot);
+        bCtx.save();
+        bCtx.translate(x, y);
+        bCtx.rotate(rot);
+
+        if (kind < 0.34) {
+          // 暗い割れ目・窪み
+          ctx.fillStyle = `rgba(54, 34, 34, ${0.18 + rand() * 0.28})`;
+          bCtx.fillStyle = `rgba(30, 30, 30, ${0.28 + rand() * 0.32})`;
+        } else if (kind < 0.62) {
+          // 暗赤褐色の石灰藻パッチ
+          ctx.fillStyle = `rgba(148, 72, 68, ${0.16 + rand() * 0.24})`;
+          bCtx.fillStyle = `rgba(175, 175, 175, ${0.22 + rand() * 0.24})`;
+        } else if (kind < 0.80) {
+          // 苔・海藻の濃緑斑
+          ctx.fillStyle = `rgba(74, 124, 58, ${0.14 + rand() * 0.20})`;
+          bCtx.fillStyle = `rgba(155, 155, 155, 0.22)`;
+        } else {
+          // 石灰質・フジツボの明部
+          ctx.fillStyle = `rgba(218, 206, 194, ${0.14 + rand() * 0.22})`;
+          bCtx.fillStyle = `rgba(225, 225, 225, ${0.26 + rand() * 0.28})`;
+        }
+        ctx.beginPath();
+        ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+        ctx.fill();
+        bCtx.beginPath();
+        bCtx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+        bCtx.fill();
+        ctx.restore();
+        bCtx.restore();
+      }
+
+      // 細かな石目・フジツボ点描
+      for (let i = 0; i < 4200; i++) {
+        const x = rand() * size;
+        const y = rand() * size;
+        const s = 1 + rand() * 2.2;
+        const bright = rand() > 0.56;
+        ctx.fillStyle = bright ? 'rgba(235, 224, 210, 0.26)' : 'rgba(22, 14, 16, 0.34)';
+        ctx.fillRect(x, y, s, s);
+        bCtx.fillStyle = bright ? 'rgba(238, 238, 238, 0.40)' : 'rgba(20, 20, 20, 0.45)';
+        bCtx.fillRect(x, y, s, s);
+      }
+
+      const map = new THREE.CanvasTexture(cMap);
+      map.colorSpace = THREE.SRGBColorSpace;
+      map.wrapS = THREE.RepeatWrapping;
+      map.wrapT = THREE.RepeatWrapping;
+      map.repeat.set(...STYLE.rockBumpRepeat);
+      map.anisotropy = 4;
+
+      const bump = new THREE.CanvasTexture(cBump);
+      bump.wrapS = THREE.RepeatWrapping;
+      bump.wrapT = THREE.RepeatWrapping;
+      bump.repeat.set(...STYLE.rockBumpRepeat);
+      bump.anisotropy = 4;
+
+      return { map, bump };
+    }
+
+    // 沈んだ構造物（土管・白コルゲート管・錆びた魚礁鉄箱・水没木樽）の手続きテクスチャ
+    function buildPropTextures(size = STYLE.propTexSize) {
+      const makeTex = (drawFn) => {
+        const c = document.createElement('canvas');
+        c.width = size;
+        c.height = size;
+        drawFn(c.getContext('2d'), size);
+        const t = new THREE.CanvasTexture(c);
+        t.colorSpace = THREE.SRGBColorSpace;
+        t.wrapS = THREE.RepeatWrapping;
+        t.wrapT = THREE.RepeatWrapping;
+        t.anisotropy = 4;
+        return t;
+      };
+
+      // 1) 黄土色の風化した素焼き土管・コンクリート管
+      const clayPipe = makeTex((ctx, s) => {
+        const rand = makePrng(9011);
+        const g = ctx.createLinearGradient(0, 0, 0, s);
+        g.addColorStop(0.0, '#9e7d4a');
+        g.addColorStop(0.5, '#866639');
+        g.addColorStop(1.0, '#624826');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, s, s);
+        for (let i = 0; i < 1200; i++) {
+          const x = rand() * s;
+          const y = rand() * s;
+          const r = 1 + rand() * 5;
+          const k = rand();
+          ctx.fillStyle = k < 0.35
+            ? `rgba(48, 56, 30, ${0.14 + rand() * 0.22})`
+            : k < 0.7
+              ? `rgba(175, 146, 98, ${0.14 + rand() * 0.20})`
+              : `rgba(54, 34, 18, ${0.18 + rand() * 0.24})`;
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+
+      // 2) 白く石灰化したコルゲート管（favorite-01.png 中央岩に立て掛かる管：水中の苔汚れ入り）
+      const palePipe = makeTex((ctx, s) => {
+        const rand = makePrng(9022);
+        ctx.fillStyle = '#9e9b8e';
+        ctx.fillRect(0, 0, s, s);
+        // 横リブの陰影帯
+        const ribs = 18;
+        const step = s / ribs;
+        for (let i = 0; i < ribs; i++) {
+          const y0 = i * step;
+          const rg = ctx.createLinearGradient(0, y0, 0, y0 + step);
+          rg.addColorStop(0.0, 'rgba(42, 44, 34, 0.52)');
+          rg.addColorStop(0.35, 'rgba(204, 200, 188, 0.36)');
+          rg.addColorStop(0.75, 'rgba(146, 144, 132, 0.18)');
+          rg.addColorStop(1.0, 'rgba(38, 44, 32, 0.56)');
+          ctx.fillStyle = rg;
+          ctx.fillRect(0, y0, s, step);
+        }
+        for (let i = 0; i < 950; i++) {
+          ctx.fillStyle = rand() > 0.42 ? 'rgba(48, 58, 36, 0.28)' : 'rgba(216, 212, 198, 0.22)';
+          ctx.fillRect(rand() * s, rand() * s, 2 + rand() * 4, 1 + rand() * 3);
+        }
+      });
+
+      // 3) 錆びた鉄箱・魚礁ブロック
+      const rustIron = makeTex((ctx, s) => {
+        const rand = makePrng(9033);
+        ctx.fillStyle = '#532c1d';
+        ctx.fillRect(0, 0, s, s);
+        for (let i = 0; i < 900; i++) {
+          const x = rand() * s;
+          const y = rand() * s;
+          const r = 2 + rand() * 14;
+          const k = rand();
+          ctx.fillStyle = k < 0.38
+            ? `rgba(128, 56, 24, ${0.20 + rand() * 0.28})`
+            : k < 0.72
+              ? `rgba(38, 28, 26, ${0.24 + rand() * 0.30})`
+              : `rgba(52, 68, 36, ${0.15 + rand() * 0.20})`;
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+
+      // 4) 水没した古木樽（板目・継ぎ目・水垢）
+      const barrelWood = makeTex((ctx, s) => {
+        const rand = makePrng(9044);
+        ctx.fillStyle = '#5b3f2b';
+        ctx.fillRect(0, 0, s, s);
+        const staves = 14;
+        const sw = s / staves;
+        for (let i = 0; i < staves; i++) {
+          const x0 = i * sw;
+          const shade = Math.floor((rand() - 0.5) * 28);
+          ctx.fillStyle = `rgb(${92 + shade}, ${63 + Math.floor(shade * 0.7)}, ${43 + Math.floor(shade * 0.5)})`;
+          ctx.fillRect(x0, 0, sw, s);
+          // 板の継ぎ目溝
+          ctx.fillStyle = 'rgba(20, 12, 8, 0.72)';
+          ctx.fillRect(x0, 0, 2, s);
+          // 木目縦筋
+          for (let j = 0; j < 8; j++) {
+            ctx.fillStyle = rand() > 0.5 ? 'rgba(34, 22, 14, 0.26)' : 'rgba(136, 98, 66, 0.18)';
+            ctx.fillRect(x0 + 2 + rand() * (sw - 3), 0, 1.2, s);
+          }
+        }
+        // 海藻・錆滲み
+        for (let i = 0; i < 350; i++) {
+          ctx.fillStyle = rand() > 0.4 ? 'rgba(36, 48, 26, 0.18)' : 'rgba(98, 42, 20, 0.16)';
+          ctx.beginPath();
+          ctx.arc(rand() * s, rand() * s, 2 + rand() * 8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+
+      return { clayPipe, palePipe, rustIron, barrelWood };
+    }
+
+    // 水面裏の細かな揺らめきバンプテクスチャ
+    function buildWaterRippleTexture(size = 256) {
+      const c = document.createElement('canvas');
+      c.width = size;
+      c.height = size;
+      const ctx = c.getContext('2d');
+      const img = ctx.createImageData(size, size);
+      for (let y = 0; y < size; y++) {
+        const ny = (y / size) * Math.PI * 2;
+        for (let x = 0; x < size; x++) {
+          const nx = (x / size) * Math.PI * 2;
+          const w = Math.sin(nx * 3 + Math.cos(ny * 2)) * 0.35
+                  + Math.cos(ny * 4 - Math.sin(nx * 3)) * 0.30
+                  + Math.sin((nx + ny) * 5) * 0.20
+                  + Math.cos((nx * 2 - ny * 3) * 2) * 0.15;
+          const v = clamp(Math.round(128 + w * 115), 0, 255);
+          const o = (y * size + x) * 4;
+          img.data[o] = img.data[o + 1] = img.data[o + 2] = v;
+          img.data[o + 3] = 255;
+        }
+      }
+      ctx.putImageData(img, 0, 0);
+      const t = new THREE.CanvasTexture(c);
+      t.wrapS = THREE.RepeatWrapping;
+      t.wrapT = THREE.RepeatWrapping;
+      t.repeat.set(5, 3);
+      return t;
+    }
+
+    // ===== 部品：コースティクス＋物理水中深度ブルー吸収 (applyCaustics, 砂・岩・構造物共用) =====
+    // 視線が水槽内を通過する実距離 waterDist をレイ-AABB で算出し、手前は鮮明・奥ほど深い青に沈める
+    function applyCaustics(material, options = {}) {
+      const mode = options.mode === 'rock' ? 'rock' : 'sand';
+      const maxGain = mode === 'sand' ? 0.34 : 0.24;
+      const gain = Math.min(options.gain ?? (mode === 'sand' ? STYLE.causticsSandGain : STYLE.causticsRockGain), maxGain);
+      const waterDepthEnabled = options.underwaterDepth !== false;
+
+      // 物理水中吸収を使うマテリアルは標準の空気フォグを無効化して手前の霞みを防ぐ
+      if (waterDepthEnabled) {
+        material.fog = false;
+      }
+
+      const uniforms = {
+        uCausticTime: { value: 0 },
+        uCausticGain: { value: gain },
+        uCausticScale1: { value: options.scale1 ?? STYLE.causticsScale1 },
+        uCausticScale2: { value: options.scale2 ?? STYLE.causticsScale2 },
+        uCausticSpeed1: { value: options.speed1 ?? STYLE.causticsSpeed1 },
+        uCausticSpeed2: { value: options.speed2 ?? STYLE.causticsSpeed2 },
+        uCausticPow: { value: options.pow ?? STYLE.causticsPow },
+        uCausticColor: { value: new THREE.Color(options.color ?? STYLE.causticsColor) },
+        uCausticRadius: { value: new THREE.Vector2(options.radiusX ?? STYLE.causticsSandRadiusX, options.radiusZ ?? STYLE.causticsSandRadiusZ) },
+        uCausticMaskRange: { value: new THREE.Vector2(options.inner ?? STYLE.causticsSandInner, options.outer ?? STYLE.causticsSandOuter) },
+        uTankHalf: { value: new THREE.Vector3(HALF_X, WATER_Y, HALF_Z) },
+        uUwAbsorb: { value: new THREE.Vector3(...(options.underwaterAbsorb ?? STYLE.underwaterAbsorb)) },
+        uUwScatterRate: { value: options.underwaterScatterRate ?? STYLE.underwaterScatterRate },
+        uUwDeepColor: { value: new THREE.Color(options.underwaterDeepColor ?? STYLE.underwaterDeepColor) },
+        uUwShallowColor: { value: new THREE.Color(options.underwaterShallowColor ?? STYLE.underwaterShallowColor) },
+        uUwEnabled: { value: waterDepthEnabled ? 1.0 : 0.0 },
+      };
+
+      material.userData.causticsUniforms = uniforms;
+      const cacheTag = options.cacheTag ?? `${mode}-${waterDepthEnabled ? 'uw' : 'plain'}`;
+      material.customProgramCacheKey = () => `aq-caustics-v6-${cacheTag}`;
+
+      const prevOnBeforeCompile = material.onBeforeCompile;
+      material.onBeforeCompile = (shader, rendererRef) => {
+        if (prevOnBeforeCompile) prevOnBeforeCompile(shader, rendererRef);
+        Object.assign(shader.uniforms, uniforms);
+
+        shader.vertexShader = shader.vertexShader
+          .replace('#include <common>', '#include <common>\nvarying vec3 vCausticWorldPos;')
+          .replace('#include <project_vertex>', '#include <project_vertex>\nvCausticWorldPos = ( modelMatrix * vec4( transformed, 1.0 ) ).xyz;');
+
+        const causticPars = `
+#include <common>
+uniform float uCausticTime;
+uniform float uCausticGain;
+uniform float uCausticScale1;
+uniform float uCausticScale2;
+uniform float uCausticSpeed1;
+uniform float uCausticSpeed2;
+uniform float uCausticPow;
+uniform vec3 uCausticColor;
+uniform vec2 uCausticRadius;
+uniform vec2 uCausticMaskRange;
+uniform vec3 uTankHalf;
+uniform vec3 uUwAbsorb;
+uniform float uUwScatterRate;
+uniform vec3 uUwDeepColor;
+uniform vec3 uUwShallowColor;
+uniform float uUwEnabled;
+varying vec3 vCausticWorldPos;
+
+float aqCausticLayer(vec2 p, float t) {
+  float a = sin(p.x * 2.1 + t * 1.15 + cos(p.y * 1.7 - t * 0.85));
+  float b = cos(p.y * 2.3 - t * 0.95 + sin(p.x * 1.9 + t * 0.75));
+  float c = sin((p.x + p.y) * 1.6 + t * 0.65);
+  float v = abs(a + b + c * 0.5) / 2.5;
+  float ridge = 1.0 - clamp(v, 0.0, 1.0);
+  return pow(ridge, uCausticPow);
+}
+
+float aqCausticPattern(vec2 xz, float t) {
+  vec2 p1 = xz * uCausticScale1 + vec2(t * 0.12, -t * 0.08);
+  vec2 p2 = vec2(xz.x * 0.8 - xz.y * 0.6, xz.x * 0.6 + xz.y * 0.8) * uCausticScale2 + vec2(-t * 0.09, t * 0.14);
+  float l1 = aqCausticLayer(p1, t * uCausticSpeed1);
+  float l2 = aqCausticLayer(p2, t * uCausticSpeed2);
+  return clamp(max(l1, l2) * 0.78 + l1 * l2 * 0.55, 0.0, 1.0);
+}
+
+float aqWaterRayDistance(vec3 worldPos, vec3 camPos, vec3 tankHalf) {
+  vec3 toFrag = worldPos - camPos;
+  float totalDist = length(toFrag);
+  vec3 rayDir = toFrag / max(totalDist, 1e-5);
+  vec3 safeDir = vec3(
+    abs(rayDir.x) < 1e-5 ? 1e-5 : rayDir.x,
+    abs(rayDir.y) < 1e-5 ? 1e-5 : rayDir.y,
+    abs(rayDir.z) < 1e-5 ? 1e-5 : rayDir.z
+  );
+  vec3 boxMin = vec3(-tankHalf.x, -0.35, -tankHalf.z);
+  vec3 boxMax = vec3( tankHalf.x,  tankHalf.y,  tankHalf.z);
+  vec3 t0 = (boxMin - camPos) / safeDir;
+  vec3 t1 = (boxMax - camPos) / safeDir;
+  vec3 tMinV = min(t0, t1);
+  float tEnter = max(max(tMinV.x, tMinV.y), max(tMinV.z, 0.0));
+  return max(0.0, totalDist - tEnter);
+}
+`;
+        const causticInject = mode === 'sand'
+          ? `
+#include <lights_fragment_end>
+{
+  float d = length(vec2(vCausticWorldPos.x / uCausticRadius.x, (vCausticWorldPos.z - 0.35) / uCausticRadius.y));
+  float lightPoolMask = 1.0 - smoothstep(uCausticMaskRange.x, uCausticMaskRange.y, d);
+  float cPat = aqCausticPattern(vCausticWorldPos.xz, uCausticTime);
+  reflectedLight.directDiffuse *= mix(0.68, 1.04 + 0.18 * cPat, lightPoolMask);
+  float causticContrib = cPat * (0.28 + 0.72 * lightPoolMask) * uCausticGain;
+  reflectedLight.directDiffuse += diffuseColor.rgb * uCausticColor * causticContrib;
+}
+`
+          : `
+#include <lights_fragment_end>
+{
+  vec3 wNormal = transformNormalByInverseViewMatrix(normal, viewMatrix);
+  float up = clamp(wNormal.y, 0.0, 1.0);
+  float upMask = up * up;
+  float cPat = aqCausticPattern(vCausticWorldPos.xz + vCausticWorldPos.y * 0.22, uCausticTime);
+  reflectedLight.directDiffuse += diffuseColor.rgb * uCausticColor * (cPat * upMask * uCausticGain);
+}
+`;
+        const uwDepthInject = `
+if (uUwEnabled > 0.5) {
+  float waterDist = aqWaterRayDistance(vCausticWorldPos, cameraPosition, uTankHalf);
+  float hNorm = clamp(vCausticWorldPos.y / uTankHalf.y, 0.0, 1.0);
+  float edgeX = smoothstep(0.60, 1.0, abs(vCausticWorldPos.x) / uTankHalf.x);
+  vec3 transmittance = exp(-uUwAbsorb * waterDist);
+  vec3 inScatterColor = mix(uUwDeepColor, uUwShallowColor, smoothstep(0.0, 0.85, hNorm));
+  inScatterColor *= (1.0 - edgeX * 0.42);
+  float scatterFactor = 1.0 - exp(-waterDist * uUwScatterRate);
+  outgoingLight = outgoingLight * transmittance + inScatterColor * scatterFactor;
+}
+#include <opaque_fragment>
+`;
+        shader.fragmentShader = shader.fragmentShader
+          .replace('#include <common>', causticPars)
+          .replace('#include <lights_fragment_end>', causticInject)
+          .replace('#include <opaque_fragment>', uwDepthInject);
+      };
+      material.needsUpdate = true;
+
+      const update = (time) => {
+        uniforms.uCausticTime.value = time;
+      };
+      update.uniforms = uniforms;
+      return update;
+    }
+
+    // ===== 部品：暗い鑑賞空間 (buildViewingRoom, 水槽の外側を暗く保つ) =====
+    function buildViewingRoom(options = {}) {
+      const radius = options.radius ?? STYLE.roomRadius;
+      const floorY = options.floorY ?? STYLE.roomFloorY;
+      const ceilingY = options.ceilingY ?? STYLE.roomCeilingY;
+
+      const group = new THREE.Group();
+      group.name = 'viewing-room';
+
+      // 床テクスチャ：暗い展示室床＋水槽ガラス直下への控えめな青い光漏れ
+      const floorCanvas = document.createElement('canvas');
+      floorCanvas.width = 512;
+      floorCanvas.height = 512;
+      const fCtx = floorCanvas.getContext('2d');
+      fCtx.fillStyle = '#04070d';
+      fCtx.fillRect(0, 0, 512, 512);
+      // 水槽周囲のほのかな青い反射だまり
+      const g1 = fCtx.createRadialGradient(256, 256, 36, 256, 256, 175);
+      g1.addColorStop(0.0, STYLE.roomFloorSpillCore);
+      g1.addColorStop(0.45, STYLE.roomFloorSpillColor);
+      g1.addColorStop(0.75, 'rgba(6, 28, 64, 0.10)');
+      g1.addColorStop(1.0, 'rgba(4, 7, 13, 0.0)');
+      fCtx.fillStyle = g1;
+      fCtx.fillRect(0, 0, 512, 512);
+      // 展示室の床タイル目地をうっすら描く
+      fCtx.strokeStyle = 'rgba(255, 255, 255, 0.018)';
+      fCtx.lineWidth = 1;
+      for (let i = 0; i <= 512; i += 32) {
+        fCtx.beginPath(); fCtx.moveTo(i, 0); fCtx.lineTo(i, 512); fCtx.stroke();
+        fCtx.beginPath(); fCtx.moveTo(0, i); fCtx.lineTo(512, i); fCtx.stroke();
+      }
+      const floorTex = new THREE.CanvasTexture(floorCanvas);
+      floorTex.colorSpace = THREE.SRGBColorSpace;
+
+      const floorMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(radius * 2, radius * 2),
+        new THREE.MeshBasicMaterial({ map: floorTex, fog: false })
+      );
+      floorMesh.rotation.x = -Math.PI / 2;
+      floorMesh.position.y = floorY;
+      floorMesh.name = 'room-floor';
+      group.add(floorMesh);
+
+      // 暗い展示室天井（ごく僅かな青い照り返しのみ）
+      const ceilCanvas = document.createElement('canvas');
+      ceilCanvas.width = 256;
+      ceilCanvas.height = 256;
+      const cCtx = ceilCanvas.getContext('2d');
+      cCtx.fillStyle = '#03060b';
+      cCtx.fillRect(0, 0, 256, 256);
+      const cg = cCtx.createRadialGradient(128, 128, 14, 128, 128, 92);
+      cg.addColorStop(0.0, 'rgba(24, 92, 172, 0.20)');
+      cg.addColorStop(0.6, 'rgba(8, 34, 72, 0.08)');
+      cg.addColorStop(1.0, 'rgba(3, 6, 11, 0.0)');
+      cCtx.fillStyle = cg;
+      cCtx.fillRect(0, 0, 256, 256);
+      const ceilTex = new THREE.CanvasTexture(ceilCanvas);
+      ceilTex.colorSpace = THREE.SRGBColorSpace;
+
+      const ceilingMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(radius * 2, radius * 2),
+        new THREE.MeshBasicMaterial({ map: ceilTex, fog: false })
+      );
+      ceilingMesh.rotation.x = Math.PI / 2;
+      ceilingMesh.position.y = ceilingY;
+      ceilingMesh.name = 'room-ceiling';
+      group.add(ceilingMesh);
+
+      // 周囲の暗い展示室円筒壁
+      const wallH = ceilingY - floorY + 0.5;
+      const wallMesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius, radius, wallH, 40, 1, true),
+        new THREE.MeshBasicMaterial({
+          color: options.wallColor ?? STYLE.roomWallColor,
+          side: THREE.BackSide,
+          fog: false,
+        })
+      );
+      wallMesh.position.y = (ceilingY + floorY) * 0.5;
+      wallMesh.name = 'room-wall';
+      group.add(wallMesh);
+
+      return { group, floorMesh, ceilingMesh, wallMesh };
+    }
+
+    // ===== 部品：水中ボリューム背景（内向き 4 面シームレス深海グラデ, buildBackdropGradient） =====
+    // 手前面は FrontSide で自動カリングされるため 360° どの方向から見ても奥の水だけが見え、外側（部屋）は暗く残る
+    function buildBackdropGradient(options = {}) {
+      const inset = options.inset ?? STYLE.backdropInset;
+      const hx = (options.tankW ?? TANK_W) * 0.5 - inset;
+      const hz = (options.tankD ?? TANK_D) * 0.5 - inset;
+      const hY = options.waterY ?? WATER_Y;
+      const yMin = -0.04;
+
+      // 内向き法線の 4 面（背面・前面・左面・右面）を単一 BufferGeometry として構築
+      const positions = new Float32Array([
+        // 背面 z = -hz（+Z 向き）
+        -hx, yMin, -hz,   hx, yMin, -hz,   hx, hY, -hz,
+        -hx, yMin, -hz,   hx, hY, -hz,    -hx, hY, -hz,
+        // 前面 z = +hz（-Z 向き）
+         hx, yMin,  hz,  -hx, yMin,  hz,  -hx, hY,  hz,
+         hx, yMin,  hz,  -hx, hY,  hz,     hx, hY,  hz,
+        // 左面 x = -hx（+X 向き）
+        -hx, yMin,  hz,  -hx, yMin, -hz,  -hx, hY, -hz,
+        -hx, yMin,  hz,  -hx, hY, -hz,    -hx, hY,  hz,
+        // 右面 x = +hx（-X 向き）
+         hx, yMin, -hz,   hx, yMin,  hz,   hx, hY,  hz,
+         hx, yMin, -hz,   hx, hY,  hz,     hx, hY, -hz,
+      ]);
+      const normals = new Float32Array([
+        0, 0, 1,  0, 0, 1,  0, 0, 1,   0, 0, 1,  0, 0, 1,  0, 0, 1,
+        0, 0,-1,  0, 0,-1,  0, 0,-1,   0, 0,-1,  0, 0,-1,  0, 0,-1,
+        1, 0, 0,  1, 0, 0,  1, 0, 0,   1, 0, 0,  1, 0, 0,  1, 0, 0,
+       -1, 0, 0, -1, 0, 0, -1, 0, 0,  -1, 0, 0, -1, 0, 0, -1, 0, 0,
+      ]);
+
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geo.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+
+      const uniforms = {
+        uTime: { value: 0 },
+        uTopColor: { value: new THREE.Color(options.topColor ?? STYLE.backdropTopColor) },
+        uMidColor: { value: new THREE.Color(options.midColor ?? STYLE.backdropMidColor) },
+        uBottomColor: { value: new THREE.Color(options.bottomColor ?? STYLE.backdropBottomColor) },
+        uLightPoolColor: { value: new THREE.Color(options.lightPoolColor ?? STYLE.backdropLightPoolColor) },
+        uHalfX: { value: hx },
+        uHalfZ: { value: hz },
+        uWaterY: { value: hY },
+        uSideDarken: { value: options.sideDarken ?? STYLE.backdropSideDarken },
+      };
+
+      const mat = new THREE.ShaderMaterial({
+        uniforms,
+        fog: false,
+        depthWrite: true,
+        side: THREE.FrontSide,
+        vertexShader: `
+          varying vec3 vWorldPos;
+          varying vec3 vWallNormal;
+          void main() {
+            vec4 wp = modelMatrix * vec4(position, 1.0);
+            vWorldPos = wp.xyz;
+            vWallNormal = normalize(mat3(modelMatrix) * normal);
+            gl_Position = projectionMatrix * viewMatrix * wp;
+          }
+        `,
+        fragmentShader: `
+          uniform float uTime;
+          uniform vec3 uTopColor;
+          uniform vec3 uMidColor;
+          uniform vec3 uBottomColor;
+          uniform vec3 uLightPoolColor;
+          uniform float uHalfX;
+          uniform float uHalfZ;
+          uniform float uWaterY;
+          uniform float uSideDarken;
+          varying vec3 vWorldPos;
+          varying vec3 vWallNormal;
+
+          float hash21(vec2 p) {
+            p = fract(p * vec2(123.34, 456.21));
+            p += dot(p, p + 45.32);
+            return fract(p.x * p.y);
+          }
+
+          float vnoise(vec2 p) {
+            vec2 i = floor(p);
+            vec2 f = fract(p);
+            f = f * f * (3.0 - 2.0 * f);
+            float a = hash21(i);
+            float b = hash21(i + vec2(1.0, 0.0));
+            float c = hash21(i + vec2(0.0, 1.0));
+            float d = hash21(i + vec2(1.0, 1.0));
+            return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+          }
+
+          void main() {
+            float h = clamp(vWorldPos.y / uWaterY, 0.0, 1.0);
+
+            // 上は明るく、中層は濃いコバルト青、下は暗い深海紺へ落ちる
+            vec3 col = mix(uBottomColor, uMidColor, smoothstep(0.02, 0.56, h));
+            col = mix(col, uTopColor, smoothstep(0.58, 1.0, h));
+
+            // 横方向・隅の暗がり（両端と隅をしっかり落として奥行きと舞台感を作る）
+            float isZWall = step(0.5, abs(vWallNormal.z));
+            float horiz = isZWall > 0.5
+              ? abs(vWorldPos.x) / uHalfX
+              : abs(vWorldPos.z) / uHalfZ;
+            float cornerDark = 1.0 - smoothstep(0.30, 1.0, horiz) * uSideDarken;
+            // 左右側面はさらに深めの紺へ落として正面の水槽開口を際立たせる
+            float sideDim = mix(0.52, 1.0, isZWall);
+            col *= cornerDark * sideDim;
+
+            // 上方からの光の柱に連動する水中散乱光だまり（白飛びさせず深いコバルト青を保つ）
+            float xCoord = vWorldPos.x;
+            float beam1 = exp(-pow((xCoord - 1.50) / 1.40, 2.0)) * 0.24;
+            float beam2 = exp(-pow((xCoord + 0.05) / 1.35, 2.0)) * 0.22;
+            float beam3 = exp(-pow((xCoord + 1.65) / 1.15, 2.0)) * 0.14;
+            float beamMask = (beam1 + beam2 + beam3) * smoothstep(0.18, 0.96, h) * isZWall;
+
+            // 水面直下のゆらぎと微細な水中濁りムラ
+            vec2 flowUv = vec2(vWorldPos.x * 0.55 + vWorldPos.z * 0.35, vWorldPos.y * 0.85);
+            float wisp = vnoise(flowUv * 1.4 + vec2(uTime * 0.06, -uTime * 0.04));
+            float shimmer = sin(vWorldPos.x * 2.8 + uTime * 0.85 + wisp * 3.0) * 0.5 + 0.5;
+            float topShimmer = shimmer * smoothstep(0.72, 1.0, h) * 0.11 * cornerDark;
+
+            col += uLightPoolColor * (beamMask * (0.76 + 0.24 * wisp) + topShimmer);
+
+            // 底面付近の深み暗転
+            col *= mix(0.46, 1.0, smoothstep(0.0, 0.30, h));
+
+            gl_FragColor = vec4(col, 1.0);
+            #include <tonemapping_fragment>
+            #include <colorspace_fragment>
+          }
+        `,
+      });
+
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(0, 0, 0);
+      mesh.renderOrder = 0;
+      mesh.name = 'backdrop-gradient';
+
+      const update = (elapsed) => {
+        uniforms.uTime.value = elapsed;
+      };
+      return { mesh, material: mat, uniforms, update };
+    }
+
+    // ===== 部品：筐体の台座と砂の側面 (buildCabinet) =====
+    function buildCabinet(options = {}) {
+      const tankW = options.tankW ?? TANK_W;
+      const tankD = options.tankD ?? TANK_D;
+      const grainTex = options.grainTex;
+
+      const group = new THREE.Group();
+      group.name = 'cabinet';
+
+      const pedW = options.pedestalWidth ?? STYLE.pedestalWidth;
+      const pedH = options.pedestalHeight ?? STYLE.pedestalHeight;
+      const pedD = options.pedestalDepth ?? STYLE.pedestalDepth;
+      const pedY = options.pedestalCenterY ?? STYLE.pedestalCenterY;
+
+      const pedGeo = new THREE.BoxGeometry(pedW, pedH, pedD);
+      const pedMat = new THREE.MeshStandardMaterial({
+        color: options.pedestalColor ?? STYLE.pedestalColor,
+        roughness: options.pedestalRoughness ?? STYLE.pedestalRoughness,
+        metalness: options.pedestalMetalness ?? STYLE.pedestalMetalness,
+        fog: false,
+      });
+      const pedestal = new THREE.Mesh(pedGeo, pedMat);
+      pedestal.position.y = pedY;
+      pedestal.name = 'cabinet-pedestal';
+      group.add(pedestal);
+
+      const trimW = options.trimWidth ?? STYLE.pedestalTrimWidth;
+      const trimH = options.trimHeight ?? STYLE.pedestalTrimHeight;
+      const trimY = pedY + pedH / 2 + trimH / 2;
+      const trimMat = new THREE.MeshStandardMaterial({
+        color: options.trimColor ?? STYLE.pedestalTrimColor,
+        roughness: options.trimRoughness ?? STYLE.pedestalTrimRoughness,
+        metalness: options.trimMetalness ?? STYLE.pedestalTrimMetalness,
+        fog: false,
+      });
+      const trimSpecs = [
+        { w: pedW, d: trimW, x: 0, z:  pedD / 2 - trimW / 2, name: 'trim-front' },
+        { w: pedW, d: trimW, x: 0, z: -pedD / 2 + trimW / 2, name: 'trim-back' },
+        { w: trimW, d: pedD - trimW * 2, x: -pedW / 2 + trimW / 2, z: 0, name: 'trim-left' },
+        { w: trimW, d: pedD - trimW * 2, x:  pedW / 2 - trimW / 2, z: 0, name: 'trim-right' },
+      ];
+      const trimMeshes = trimSpecs.map((ts) => {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(ts.w, trimH, ts.d), trimMat);
+        m.position.set(ts.x, trimY, ts.z);
+        m.name = ts.name;
+        group.add(m);
+        return m;
+      });
+
+      const sideH = options.sandSideHeight ?? STYLE.sandSideHeight;
+      const sideY = options.sandSideCenterY ?? STYLE.sandSideCenterY;
+      const sandSideGeo = new THREE.BoxGeometry(tankW, sideH, tankD);
+      const rawSideIdx = sandSideGeo.getIndex();
+      const sideIndices = [];
+      for (const g of sandSideGeo.groups) {
+        if (g.materialIndex === 2 || g.materialIndex === 3) continue;
+        for (let i = 0; i < g.count; i++) {
+          sideIndices.push(rawSideIdx.getX(g.start + i));
+        }
+      }
+      sandSideGeo.setIndex(sideIndices);
+      sandSideGeo.clearGroups();
+      const sandSideMat = new THREE.MeshStandardMaterial({
+        color: options.sandSideColor ?? STYLE.sandSideColor,
+        roughness: options.sandSideRoughness ?? STYLE.sandSideRoughness,
+        metalness: 0.0,
+        bumpMap: grainTex ? cloneTextureWithRepeat(grainTex, ...(options.sandSideBumpRepeat ?? STYLE.sandSideBumpRepeat)) : null,
+        bumpScale: options.sandSideBumpScale ?? STYLE.sandSideBumpScale,
+        fog: false,
+      });
+      const sandSide = new THREE.Mesh(sandSideGeo, sandSideMat);
+      sandSide.position.y = sideY;
+      sandSide.name = 'sand-side';
+      group.add(sandSide);
+
+      return { group, pedestal, trimMeshes, sandSide };
+    }
+
+    // ===== 部品：ガラスと枠 (buildGlassTank) =====
+    function buildGlassTank(options = {}) {
+      const tankW = options.tankW ?? TANK_W;
+      const tankD = options.tankD ?? TANK_D;
+      const tankH = options.tankH ?? WATER_Y;
+      const hx = tankW / 2;
+      const hz = tankD / 2;
+
+      const group = new THREE.Group();
+      group.name = 'glass-tank';
+
+      const glassOpacity = Math.min(options.glassOpacity ?? STYLE.glassOpacity, 0.08);
+      const glassMat = new THREE.MeshStandardMaterial({
+        color: options.glassColor ?? STYLE.glassColor,
+        transparent: true,
+        opacity: glassOpacity,
+        roughness: options.glassRoughness ?? STYLE.glassRoughness,
+        metalness: options.glassMetalness ?? STYLE.glassMetalness,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+        envMapIntensity: options.glassEnvMapIntensity ?? STYLE.glassEnvMapIntensity,
+        envMap: options.envMap ?? null,
+        fog: false,
+      });
+
+      const paneSpecs = [
+        { w: tankW, h: tankH, x: 0,   y: tankH / 2, z:  hz, ry: 0,           name: 'glass-front' },
+        { w: tankW, h: tankH, x: 0,   y: tankH / 2, z: -hz, ry: Math.PI,     name: 'glass-back' },
+        { w: tankD, h: tankH, x: -hx, y: tankH / 2, z: 0,   ry: -Math.PI/2,  name: 'glass-left' },
+        { w: tankD, h: tankH, x:  hx, y: tankH / 2, z: 0,   ry:  Math.PI/2,  name: 'glass-right' },
+      ];
+      const glassMeshes = paneSpecs.map((ps) => {
+        const m = new THREE.Mesh(new THREE.PlaneGeometry(ps.w, ps.h), glassMat);
+        m.position.set(ps.x, ps.y, ps.z);
+        m.rotation.y = ps.ry;
+        m.name = ps.name;
+        m.renderOrder = 6;
+        group.add(m);
+        return m;
+      });
+
+      const t = options.frameThickness ?? STYLE.frameThickness;
+      const frameMat = new THREE.MeshStandardMaterial({
+        color: options.frameColor ?? STYLE.frameColor,
+        roughness: options.frameRoughness ?? STYLE.frameRoughness,
+        metalness: options.frameMetalness ?? STYLE.frameMetalness,
+        fog: false,
+      });
+      const frameMeshes = [];
+      const addBar = (bw, bh, bd, x, y, z, name) => {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), frameMat);
+        m.position.set(x, y, z);
+        m.name = name;
+        group.add(m);
+        frameMeshes.push(m);
+      };
+
+      addBar(t, tankH, t, -hx, tankH / 2, -hz, 'frame-v-fl-back');
+      addBar(t, tankH, t,  hx, tankH / 2, -hz, 'frame-v-fr-back');
+      addBar(t, tankH, t, -hx, tankH / 2,  hz, 'frame-v-fl-front');
+      addBar(t, tankH, t,  hx, tankH / 2,  hz, 'frame-v-fr-front');
+
+      const tx = t - 0.001;
+      addBar(tankW + t, tx, tx, 0, 0,     -hz, 'frame-x-bot-back');
+      addBar(tankW + t, tx, tx, 0, 0,      hz, 'frame-x-bot-front');
+      addBar(tankW + t, tx, tx, 0, tankH, -hz, 'frame-x-top-back');
+      addBar(tankW + t, tx, tx, 0, tankH,  hz, 'frame-x-top-front');
+
+      const tz = t - 0.002;
+      addBar(tz, tz, tankD - t, -hx, 0,     0, 'frame-z-bot-left');
+      addBar(tz, tz, tankD - t,  hx, 0,     0, 'frame-z-bot-right');
+      addBar(tz, tz, tankD - t, -hx, tankH, 0, 'frame-z-top-left');
+      addBar(tz, tz, tankD - t,  hx, tankH, 0, 'frame-z-top-right');
+
+      return { group, glassMeshes, frameMeshes };
+    }
+
+    // ===== 部品：粒子・マリンスノー (buildMarineSnow, 2層: 本体1500 + ボケ100) =====
+    function buildMarineSnow(options = {}) {
+      const mainCount = options.mainCount ?? STYLE.particleMainCount;
+      const bokehCount = options.bokehCount ?? STYLE.particleBokehCount;
+      const count = mainCount + bokehCount;
+      const maxX = (options.tankW ?? TANK_W) / 2 - (options.marginX ?? STYLE.particleMarginX);
+      const maxZ = (options.tankD ?? TANK_D) / 2 - (options.marginZ ?? STYLE.particleMarginZ);
+      const swayAmp = options.swayAmp ?? STYLE.particleSwayAmp;
+      const baseMaxX = Math.max(0.1, maxX - swayAmp);
+      const baseMaxZ = Math.max(0.1, maxZ - swayAmp);
+      const spawnMinY = options.spawnMinY ?? STYLE.particleSpawnMinY;
+      const wrapMinY = options.minY ?? STYLE.particleMinY;
+      const maxY = options.maxY ?? STYLE.particleMaxY;
+      const speedMin = options.speedMin ?? STYLE.particleSpeedMin;
+      const speedMax = options.speedMax ?? STYLE.particleSpeedMax;
+      const freqMin = options.swayFreqMin ?? STYLE.particleSwayFreqMin;
+      const freqMax = options.swayFreqMax ?? STYLE.particleSwayFreqMax;
+
+      const buildSpriteTex = (stops) => {
+        const spriteCanvas = document.createElement('canvas');
+        spriteCanvas.width = 64;
+        spriteCanvas.height = 64;
+        const sCtx = spriteCanvas.getContext('2d');
+        const grad = sCtx.createRadialGradient(32, 32, 0, 32, 32, 31);
+        for (const [offset, alpha] of stops) {
+          grad.addColorStop(offset, `rgba(255, 255, 255, ${alpha})`);
+        }
+        sCtx.fillStyle = grad;
+        sCtx.fillRect(0, 0, 64, 64);
+        return new THREE.CanvasTexture(spriteCanvas);
+      };
+
+      const mainTex = buildSpriteTex([[0.0, 1.0], [0.35, 0.72], [0.75, 0.16], [1.0, 0.0]]);
+      const bokehTex = buildSpriteTex([[0.0, 0.85], [0.55, 0.62], [0.85, 0.22], [1.0, 0.0]]);
+
+      const createLayer = ({ layerCount, color, size, opacity, spriteTex, name, renderOrder }) => {
+        const positions = new Float32Array(layerCount * 3);
+        const baseX = new Float32Array(layerCount);
+        const baseZ = new Float32Array(layerCount);
+        const fallSpeed = new Float32Array(layerCount);
+        const phaseX = new Float32Array(layerCount);
+        const phaseZ = new Float32Array(layerCount);
+        const freqX = new Float32Array(layerCount);
+        const freqZ = new Float32Array(layerCount);
+
+        for (let i = 0; i < layerCount; i++) {
+          const bx = (Math.random() * 2 - 1) * baseMaxX;
+          const bz = (Math.random() * 2 - 1) * baseMaxZ;
+          const py = spawnMinY + Math.random() * (maxY - spawnMinY);
+          baseX[i] = bx;
+          baseZ[i] = bz;
+          fallSpeed[i] = speedMin + Math.random() * (speedMax - speedMin);
+          phaseX[i] = Math.random() * Math.PI * 2;
+          phaseZ[i] = Math.random() * Math.PI * 2;
+          freqX[i] = freqMin + Math.random() * (freqMax - freqMin);
+          freqZ[i] = freqMin + Math.random() * (freqMax - freqMin);
+          positions[i * 3] = clamp(bx + Math.sin(phaseX[i]) * swayAmp, -maxX, maxX);
+          positions[i * 3 + 1] = clamp(py, wrapMinY, maxY);
+          positions[i * 3 + 2] = clamp(bz + Math.cos(phaseZ[i]) * swayAmp, -maxZ, maxZ);
+        }
+
+        const geo = new THREE.BufferGeometry();
+        const posAttr = new THREE.BufferAttribute(positions, 3);
+        geo.setAttribute('position', posAttr);
+
+        const mat = new THREE.PointsMaterial({
+          map: spriteTex,
+          color,
+          size,
+          sizeAttenuation: true,
+          transparent: true,
+          opacity,
+          depthWrite: false,
+        });
+
+        const points = new THREE.Points(geo, mat);
+        points.name = name;
+        points.renderOrder = renderOrder;
+
+        const updateLayer = (dt, elapsed) => {
+          for (let i = 0; i < layerCount; i++) {
+            const idx = i * 3;
+            let y = positions[idx + 1] - fallSpeed[i] * dt;
+            if (y < wrapMinY) y = maxY;
+            positions[idx] = clamp(baseX[i] + Math.sin(elapsed * freqX[i] + phaseX[i]) * swayAmp, -maxX, maxX);
+            positions[idx + 1] = clamp(y, wrapMinY, maxY);
+            positions[idx + 2] = clamp(baseZ[i] + Math.cos(elapsed * freqZ[i] + phaseZ[i]) * swayAmp, -maxZ, maxZ);
+          }
+          posAttr.needsUpdate = true;
+        };
+
+        return { points, positions, count: layerCount, update: updateLayer };
+      };
+
+      const mainLayer = createLayer({
+        layerCount: mainCount,
+        color: options.mainColor ?? STYLE.particleMainColor,
+        size: options.mainSize ?? STYLE.particleMainSize,
+        opacity: options.mainOpacity ?? STYLE.particleMainOpacity,
+        spriteTex: mainTex,
+        name: 'marine-snow-main',
+        renderOrder: 4,
+      });
+
+      const bokehLayer = createLayer({
+        layerCount: bokehCount,
+        color: options.bokehColor ?? STYLE.particleBokehColor,
+        size: options.bokehSize ?? STYLE.particleBokehSize,
+        opacity: options.bokehOpacity ?? STYLE.particleBokehOpacity,
+        spriteTex: bokehTex,
+        name: 'marine-snow-bokeh',
+        renderOrder: 5,
+      });
+
+      const layers = [mainLayer, bokehLayer];
+      const points = [mainLayer.points, bokehLayer.points];
+
+      const update = (dt, elapsed) => {
+        for (const layer of layers) layer.update(dt, elapsed);
+      };
+
+      const sample = (n = 10) => {
+        const out = [];
+        const bokehTake = Math.min(bokehLayer.count, n >= 2 ? Math.max(1, Math.floor(n * 0.2)) : 0);
+        const mainTake = Math.min(mainLayer.count, Math.max(0, n - bokehTake));
+        for (let i = 0; i < mainTake; i++) {
+          out.push([mainLayer.positions[i * 3], mainLayer.positions[i * 3 + 1], mainLayer.positions[i * 3 + 2]]);
+        }
+        for (let i = 0; i < bokehTake; i++) {
+          out.push([bokehLayer.positions[i * 3], bokehLayer.positions[i * 3 + 1], bokehLayer.positions[i * 3 + 2]]);
+        }
+        return out;
+      };
+
+      const countOutOfBounds = () => {
+        let oob = 0;
+        for (const layer of layers) {
+          for (let i = 0; i < layer.count; i++) {
+            const x = layer.positions[i * 3];
+            const y = layer.positions[i * 3 + 1];
+            const z = layer.positions[i * 3 + 2];
+            if (Math.abs(x) > HALF_X - 1e-4 || Math.abs(z) > HALF_Z - 1e-4 || y < 0 || y > WATER_Y) {
+              oob++;
+            }
+          }
+        }
+        return oob;
+      };
+
+      return { points, layers, update, count, sample, countOutOfBounds };
+    }
+
+    // ===== 部品：太いボリューム光の柱 (buildLightRays, フレネル輪郭フェード＋揺らめく光筋) =====
+    function buildLightRays(options = {}) {
+      const count = options.count ?? STYLE.rayCount;
+      const configs = (options.rayConfigs ?? STYLE.rayConfigs).slice(0, count);
+      const widthScale = options.widthScale ?? STYLE.rayWidthScale ?? 1.0;
+      const height = options.height ?? STYLE.rayHeight;
+      const centerY = options.centerY ?? STYLE.rayCenterY;
+      const opMin = options.opacityMin ?? STYLE.rayOpacityMin;
+      const opMax = Math.min(options.opacityMax ?? STYLE.rayOpacityMax, STYLE.rayMaxOpacity);
+      const swayAmp = options.swayAmp ?? STYLE.raySwayAmp;
+
+      // 縦グラデーション＋繊細な光筋の alphaMap（MeshBasicMaterial 互換＆任意角度から美しいボリューム円錐）
+      const rayCanvas = document.createElement('canvas');
+      rayCanvas.width = 128;
+      rayCanvas.height = 256;
+      const rCtx = rayCanvas.getContext('2d');
+      const rImg = rCtx.createImageData(128, 256);
+      for (let y = 0; y < 256; y++) {
+        const v = y / 255; // 0: top, 1: bottom
+        const topEdge = smoothstep(v, 0.0, 0.08);
+        const vertGrad = Math.pow(1.0 - smoothstep(v, 0.14, 1.0), 1.35);
+        const vProfile = topEdge * vertGrad;
+        for (let x = 0; x < 128; x++) {
+          const u = x / 128;
+          const ang = u * Math.PI * 2;
+          const streak = 0.62
+            + 0.22 * Math.sin(ang * 5.0 + 0.7)
+            + 0.16 * Math.cos(ang * 9.0 - 1.1);
+          const lum = Math.round(clamp(vProfile * streak, 0, 1) * 255);
+          const o = (y * 128 + x) * 4;
+          rImg.data[o] = lum;
+          rImg.data[o + 1] = lum;
+          rImg.data[o + 2] = lum;
+          rImg.data[o + 3] = 255;
+        }
+      }
+      rCtx.putImageData(rImg, 0, 0);
+      const rayAlphaTex = new THREE.CanvasTexture(rayCanvas);
+      rayAlphaTex.wrapS = THREE.RepeatWrapping;
+
+      const sharedUniforms = {
+        uRayTime: { value: 0 },
+        uWaterTop: { value: WATER_Y },
+      };
+
+      const group = new THREE.Group();
+      group.name = 'light-rays';
+
+      const rays = configs.map((cfg, idx) => {
+        const width = cfg.width * widthScale;
+        const topR = (cfg.topR ?? cfg.width * 0.36) * (widthScale * 0.52);
+        const botR = (cfg.botR ?? cfg.width * 0.80) * (widthScale * 0.56);
+        const geo = new THREE.CylinderGeometry(topR, botR, height, 28, 1, true);
+
+        const mat = new THREE.MeshBasicMaterial({
+          color: options.color ?? STYLE.rayColor,
+          alphaMap: rayAlphaTex,
+          transparent: true,
+          opacity: options.baseOpacity ?? STYLE.rayBaseOpacity,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+          fog: false,
+        });
+
+        const phaseVal = cfg.phase ?? idx * 1.1;
+        mat.customProgramCacheKey = () => `aq-volray-v6-${idx}`;
+        mat.onBeforeCompile = (shader) => {
+          shader.uniforms.uRayTime = sharedUniforms.uRayTime;
+          shader.uniforms.uWaterTop = sharedUniforms.uWaterTop;
+          shader.uniforms.uRayPhase = { value: phaseVal };
+
+          shader.vertexShader = shader.vertexShader
+            .replace(
+              '#include <common>',
+              '#include <common>\nvarying vec3 vRayWorldPos;\nvarying vec3 vRayViewNormal;\nvarying vec3 vRayViewDir;\nvarying vec2 vRayUv;'
+            )
+            .replace(
+              '#include <project_vertex>',
+              `#include <project_vertex>
+               vRayWorldPos = (modelMatrix * vec4(transformed, 1.0)).xyz;
+               vRayViewNormal = normalize(normalMatrix * normal);
+               vRayViewDir = normalize(-mvPosition.xyz);
+               vRayUv = uv;`
+            );
+
+          shader.fragmentShader = shader.fragmentShader
+            .replace(
+              '#include <common>',
+              `#include <common>
+               uniform float uRayTime;
+               uniform float uWaterTop;
+               uniform float uRayPhase;
+               varying vec3 vRayWorldPos;
+               varying vec3 vRayViewNormal;
+               varying vec3 vRayViewDir;
+               varying vec2 vRayUv;`
+            )
+            .replace(
+              '#include <alphamap_fragment>',
+              `#include <alphamap_fragment>
+               {
+                 // 円筒エッジを滑らかに消すフレネルフェード（どの角度から見ても輪郭が立たない）
+                 float ndv = abs(dot(normalize(vRayViewNormal), normalize(vRayViewDir)));
+                 float fresnel = pow(clamp(ndv, 0.0, 1.0), 1.55);
+                 // 水面波で揺らぐ光の細筋アニメーション
+                 float ang = vRayUv.x * 6.2831853;
+                 float s1 = 0.5 + 0.5 * sin(ang * 4.0 + uRayTime * 0.55 + uRayPhase + vRayUv.y * 1.8);
+                 float s2 = 0.5 + 0.5 * cos(ang * 7.0 - uRayTime * 0.38 + uRayPhase * 1.4);
+                 float shimmer = 0.65 + 0.35 * (s1 * 0.62 + s2 * 0.38);
+                 // 水面 y=2.6 より上へ絶対にはみ出させない厳密クリップ＆水槽内外の水平クリップ
+                 float topClip = smoothstep(uWaterTop - 0.01, uWaterTop - 0.24, vRayWorldPos.y);
+                 float botFade = smoothstep(0.02, 0.65, vRayWorldPos.y);
+                 float xClip = 1.0 - smoothstep(${(HALF_X - 0.55).toFixed(2)}, ${(HALF_X - 0.05).toFixed(2)}, abs(vRayWorldPos.x));
+                 float zClip = 1.0 - smoothstep(${(HALF_Z - 0.45).toFixed(2)}, ${(HALF_Z - 0.05).toFixed(2)}, abs(vRayWorldPos.z));
+                 diffuseColor.a *= fresnel * shimmer * topClip * botFade * xClip * zClip;
+               }`
+            );
+        };
+
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(cfg.x, centerY, cfg.z);
+        mesh.rotation.y = cfg.rotY ?? 0;
+        mesh.rotation.z = cfg.tiltZ ?? -STYLE.rayTiltZ;
+        mesh.rotation.x = cfg.tiltX ?? 0;
+        mesh.renderOrder = 3;
+        mesh.name = `light-ray-${idx + 1}`;
+        group.add(mesh);
+        return { mesh, cfg, width };
+      });
+
+      const update = (elapsed) => {
+        sharedUniforms.uRayTime.value = elapsed;
+        const opMid = (opMin + opMax) * 0.5;
+        const opHalf = (opMax - opMin) * 0.5;
+        for (const r of rays) {
+          const w = (Math.PI * 2) / r.cfg.period;
+          const s = Math.sin(elapsed * w + r.cfg.phase);
+          const boost = r.cfg.boost ?? 1.0;
+          r.mesh.material.opacity = clamp((opMid + s * opHalf) * boost, 0, STYLE.rayMaxOpacity);
+          r.mesh.rotation.z = r.cfg.tiltZ + Math.sin(elapsed * w * 0.85 + r.cfg.phase * 1.3) * swayAmp;
+        }
+      };
+
+      update(0);
+      return { group, rays, update };
+    }
+
+    // ===== 部品：水面裏の光だまり＋波紋スネルの窓 (buildSurfaceGlow) =====
+    // 下面（-Y）向き片面シェーダで、見上げた水面に揺らめく青い全反射と光柱入口のきらめきを描く
+    function buildSurfaceGlow(options = {}) {
+      const tankW = options.tankW ?? TANK_W;
+      const tankD = options.tankD ?? TANK_D;
+      const posY = options.y ?? STYLE.surfaceGlowY;
+      const opacity = options.opacity ?? STYLE.surfaceGlowOpacity;
+      const centerColor = options.centerColor ?? STYLE.surfaceGlowCenterColor;
+      const midColor = options.midColor ?? STYLE.surfaceGlowMidColor;
+      const edgeColor = options.edgeColor ?? STYLE.surfaceGlowEdgeColor;
+
+      const geo = new THREE.PlaneGeometry(tankW - 0.02, tankD - 0.02);
+      geo.rotateX(Math.PI / 2);
+
+      const uniforms = {
+        uTime: { value: 0 },
+        uOpacity: { value: opacity },
+        uCenterCol: { value: new THREE.Color(centerColor) },
+        uMidCol: { value: new THREE.Color(midColor) },
+        uEdgeCol: { value: new THREE.Color(edgeColor) },
+        uHalfX: { value: tankW * 0.5 },
+        uHalfZ: { value: tankD * 0.5 },
+      };
+
+      const mat = new THREE.ShaderMaterial({
+        uniforms,
+        transparent: true,
+        opacity,
+        blending: THREE.NormalBlending,
+        depthWrite: false,
+        side: THREE.FrontSide,
+        fog: false,
+        vertexShader: `
+          varying vec3 vWorldPos;
+          void main() {
+            vec4 wp = modelMatrix * vec4(position, 1.0);
+            vWorldPos = wp.xyz;
+            gl_Position = projectionMatrix * viewMatrix * wp;
+          }
+        `,
+        fragmentShader: `
+          uniform float uTime;
+          uniform float uOpacity;
+          uniform vec3 uCenterCol;
+          uniform vec3 uMidCol;
+          uniform vec3 uEdgeCol;
+          uniform float uHalfX;
+          uniform float uHalfZ;
+          varying vec3 vWorldPos;
+
+          float waveRipple(vec2 p, float t) {
+            float w1 = sin(p.x * 2.4 + p.y * 1.1 + t * 1.15);
+            float w2 = cos(p.y * 3.1 - p.x * 1.7 - t * 0.92);
+            float w3 = sin((p.x - p.y) * 4.2 + t * 0.78);
+            float w4 = cos((p.x * 1.5 + p.y * 2.8) * 2.1 - t * 1.35);
+            return (w1 + w2 + w3 * 0.65 + w4 * 0.45) / 3.1;
+          }
+
+          void main() {
+            vec2 p = vWorldPos.xz;
+            float nx = p.x / uHalfX;
+            float nz = p.y / uHalfZ;
+            float radial = length(vec2(nx * 0.88, nz * 1.02));
+
+            // 端は深い藍色の全反射、中央は明るい海青のスネルの窓
+            vec3 col = mix(uMidCol, uEdgeCol, smoothstep(0.28, 1.08, radial));
+
+            // 光柱の真上に並ぶ明るい水面スカイライトだまり
+            float p1 = exp(-dot((p - vec2(-0.05, -0.15)) / vec2(1.45, 1.15), (p - vec2(-0.05, -0.15)) / vec2(1.45, 1.15)));
+            float p2 = exp(-dot((p - vec2( 1.42, -0.42)) / vec2(1.30, 1.05), (p - vec2( 1.42, -0.42)) / vec2(1.30, 1.05)));
+            float p3 = exp(-dot((p - vec2(-1.65,  0.10)) / vec2(1.15, 0.95), (p - vec2(-1.65,  0.10)) / vec2(1.15, 0.95)));
+            float p4 = exp(-dot((p - vec2( 2.75, -0.70)) / vec2(0.95, 0.85), (p - vec2( 2.75, -0.70)) / vec2(0.95, 0.85)));
+            float pool = clamp(p1 * 0.85 + p2 * 0.72 + p3 * 0.56 + p4 * 0.44, 0.0, 1.0);
+
+            // 波紋のきらめき（見上げた水面が生きているように揺らめく）
+            float r1 = waveRipple(p * 1.15, uTime);
+            float r2 = waveRipple(p * 2.35 + vec2(3.1, -1.7), uTime * 1.25);
+            float crest = pow(clamp(0.52 + 0.48 * (r1 * 0.65 + r2 * 0.35), 0.0, 1.0), 2.4);
+            float sparkle = pow(clamp(0.5 + 0.5 * r2, 0.0, 1.0), 5.0) * pool * 0.55;
+
+            col = mix(col, uCenterCol, clamp(pool * (0.45 + 0.55 * crest) + sparkle, 0.0, 0.92));
+            col *= (0.78 + 0.34 * crest);
+
+            gl_FragColor = vec4(col, uOpacity);
+            #include <tonemapping_fragment>
+            #include <colorspace_fragment>
+          }
+        `,
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(0, posY, 0);
+      mesh.renderOrder = 1;
+      mesh.name = 'surface-glow';
+      const update = (elapsed) => {
+        uniforms.uTime.value = elapsed;
+      };
+      return { mesh, material: mat, uniforms, update };
+    }
+
+    // ===== 部品：砂床 (buildSandFloor, 貝殻砂利テクスチャ＋岩・構造物直下の接触影 AO＋コースティクス) =====
+    function buildSandFloor(sandTex, shadowDiscs = []) {
+      const geo = new THREE.PlaneGeometry(TANK_W, TANK_D, 108, 66);
+      geo.rotateX(-Math.PI / 2);
+      const pos = geo.attributes.position;
+      const colors = new Float32Array(pos.count * 3);
+      const baseR = ((STYLE.sandBaseColor >> 16) & 255) / 255;
+      const baseG = ((STYLE.sandBaseColor >> 8) & 255) / 255;
+      const baseB = (STYLE.sandBaseColor & 255) / 255;
+      const tmpColor = new THREE.Color();
+
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i);
+        const z = pos.getZ(i);
+        const y = sampleSandHeight(x, z);
+        pos.setY(i, y);
+
+        const cLow = fbm2D(x * 1.15 + 11.3, z * 1.15 - 7.1, 17);
+        const cHigh = fbm2D(x * 4.5 - 3.7, z * 4.5 + 5.2, 29);
+        const cMix = clamp(cLow * 0.58 + cHigh * 0.42, -1, 1);
+        const sandVar = STYLE.sandShadeVariance;
+        let shade = clamp(1.0 + cMix * sandVar, 1.0 - sandVar, 1.0 + sandVar);
+
+        // 手前の明るい砂だまりと両端・奥の自然な暗がり
+        const edgeDark = 1.0 - smoothstep(Math.abs(x) / HALF_X, 0.72, 1.0) * 0.34;
+        const backDark = 1.0 - smoothstep(-z / HALF_Z, 0.45, 1.0) * 0.30;
+        shade *= edgeDark * backDark;
+
+        // 岩や沈んだ構造物の直下に接触影（AO）を焼き込み、浮き感をゼロにする
+        let ao = 1.0;
+        for (let d = 0; d < shadowDiscs.length; d++) {
+          const sd = shadowDiscs[d];
+          const dx = (x - sd.x) / sd.rx;
+          const dz = (z - sd.z) / sd.rz;
+          const dist = Math.hypot(dx, dz);
+          if (dist < 1.35) {
+            const occ = (1.0 - smoothstep(dist, 0.35, 1.35)) * (sd.strength ?? STYLE.sandContactShadowStrength);
+            ao *= (1.0 - occ);
+          }
+        }
+        shade *= clamp(ao, 0.24, 1.0);
+
+        tmpColor.setRGB(
+          clamp(baseR * shade, 0, 1),
+          clamp(baseG * shade, 0, 1),
+          clamp(baseB * shade, 0, 1),
+          THREE.SRGBColorSpace
+        );
+        colors[i * 3] = tmpColor.r;
+        colors[i * 3 + 1] = tmpColor.g;
+        colors[i * 3 + 2] = tmpColor.b;
+      }
+
+      geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+      geo.computeVertexNormals();
+      const mat = new THREE.MeshStandardMaterial({
+        map: sandTex.map,
+        vertexColors: true,
+        roughness: 0.96,
+        metalness: 0.0,
+        bumpMap: sandTex.bump,
+        bumpScale: STYLE.sandBumpScale,
+      });
+      const updateCaustics = applyCaustics(mat, { mode: 'sand', cacheTag: 'sand-uw' });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.name = 'sand-floor';
+      return { mesh, material: mat, updateCaustics };
+    }
+
+    // ===== 部品：瀬戸内海・岩礁群 (buildRocks, 層状崖＋暗赤褐色の石灰藻＆苔斑＋水槽内厳密クランプ) =====
+    function buildRocks(rockTex, options = {}) {
+      const rockConfigs = options.rockConfigs ?? STYLE.rockConfigs;
+      const rockMat = new THREE.MeshStandardMaterial({
+        map: rockTex.map,
+        vertexColors: true,
+        roughness: STYLE.rockRoughness,
+        metalness: 0.02,
+        bumpMap: rockTex.bump,
+        bumpScale: STYLE.rockBumpScale,
+      });
+      const updateCaustics = applyCaustics(rockMat, { mode: 'rock', cacheTag: 'rock-uw' });
+
+      const group = new THREE.Group();
+      group.name = 'rocks';
+      const shadowDiscs = [];
+
+      const baseCol = new THREE.Color(STYLE.rockBaseColor);
+      const mossCol = new THREE.Color(STYLE.rockMossColor);
+      const corallineCol = new THREE.Color(STYLE.rockCorallineColor);
+      const hiCol = new THREE.Color(STYLE.rockHighlightColor);
+      const tmpColor = new THREE.Color();
+      const v = new THREE.Vector3();
+
+      for (let idx = 0; idx < rockConfigs.length; idx++) {
+        const cfg = rockConfigs[idx];
+        // インデックス共有の SphereGeometry を使い、フラット三角面を無くして滑らかな有機岩礁法線を得る
+        const segW = cfg.hero ? 52 : 36;
+        const segH = cfg.hero ? 36 : 26;
+        const geo = new THREE.SphereGeometry(cfg.r, segW, segH);
+        const pos = geo.attributes.position;
+        const posY = cfg.lowFloor ? -cfg.r * cfg.sy * 0.25 : -cfg.r * cfg.sy * 0.14;
+        const maxDisp = cfg.hero ? STYLE.rockHeroDispMax : STYLE.rockDispMax;
+        const strataWeight = cfg.strata ?? 0.8;
+
+        const cosR = Math.cos(cfg.ry);
+        const sinR = Math.sin(cfg.ry);
+        const dispCache = new Float32Array(pos.count);
+        const dirCache = new Float32Array(pos.count * 3);
+
+        for (let i = 0; i < pos.count; i++) {
+          v.fromBufferAttribute(pos, i);
+          const dir = v.clone().normalize();
+          dirCache[i * 3] = dir.x;
+          dirCache[i * 3 + 1] = dir.y;
+          dirCache[i * 3 + 2] = dir.z;
+
+          const n1 = valueNoise3D(dir.x * 2.4 + 3.1, dir.y * 2.4 + 5.3, dir.z * 2.4 + 7.2, cfg.seed) * 2 - 1;
+          const n2 = valueNoise3D(dir.x * 5.6 + 9.2, dir.y * 5.6 + 1.4, dir.z * 5.6 + 4.7, cfg.seed + 7) * 2 - 1;
+          const n3 = valueNoise3D(dir.x * 11.2 + 2.0, dir.y * 11.2 + 8.0, dir.z * 11.2 + 3.0, cfg.seed + 19) * 2 - 1;
+          const ridge1 = Math.pow(1.0 - Math.abs(n1), 1.45) * 2.0 - 1.0;
+          const ridge2 = Math.pow(1.0 - Math.abs(n2), 1.35) * 2.0 - 1.0;
+          // 地層の段差テラス感
+          const strata = Math.sin(dir.y * 11.5 + n1 * 2.6) * STYLE.rockStrataAmp * strataWeight;
+          const raw = ridge1 * 0.44 + n1 * 0.28 + ridge2 * 0.26 + n3 * 0.14;
+          const disp = clamp(raw * maxDisp + strata, -maxDisp, maxDisp);
+          dispCache[i] = disp;
+          v.multiplyScalar(1 + disp);
+
+          // 岩底を砂床の下へ確実に埋め込みつつ台座下面を貫通しないよう整形
+          if (v.y < 0) v.y *= 0.32;
+
+          // スケール・Y回転・平行移動を世界座標へベイクし、水槽ガラス＆魚巡回帯を絶対に侵さないよう滑らかに整形
+          const sx = v.x * cfg.sx;
+          const sy = v.y * cfg.sy;
+          const sz = v.z * cfg.sz;
+          let wx = cfg.x + sx * cosR + sz * sinR;
+          let wy = posY + sy;
+          let wz = cfg.z - sx * sinR + sz * cosR;
+
+          // 水槽内安全マージン（|x| <= 4.40, |z| <= 2.66, -0.22 <= y <= 2.38）
+          wx = clamp(wx, -HALF_X + 0.10, HALF_X - 0.10);
+          wz = clamp(wz, -HALF_Z + 0.09, HALF_Z - 0.09);
+          wy = clamp(wy, -0.22, WATER_Y - 0.22);
+
+          // 魚の巡回経路保護：手前岩は z >= 1.80 に収め、奥岩は z <= -1.80 に収める、低い平岩は y <= 0.30
+          if (cfg.fgGuard && wy > 0.10) {
+            wz = Math.max(wz, 1.80);
+          } else if (cfg.z < -1.85 && wy > 0.12) {
+            wz = Math.min(wz, -1.79);
+          } else if (cfg.x < -3.55 && wy > 0.12 && wz > -1.78 && wz < 1.78) {
+            wx = Math.min(wx, -3.50);
+          } else if (cfg.x > 3.55 && wy > 0.12 && wz > -1.78 && wz < 1.78) {
+            wx = Math.max(wx, 3.50);
+          }
+          if (cfg.lowFloor) {
+            wy = Math.min(wy, 0.28);
+          }
+
+          pos.setXYZ(i, wx - cfg.x, wy - posY, wz - cfg.z);
+        }
+
+        geo.computeVertexNormals();
+        // SphereGeometry の UV 継ぎ目（列 0 と列 segW）の法線を平均化して継ぎ目を完全に消す
+        const normAttr = geo.attributes.normal;
+        const rowStride = segW + 1;
+        for (let r = 0; r <= segH; r++) {
+          const i0 = r * rowStride;
+          const i1 = r * rowStride + segW;
+          const nx = normAttr.getX(i0) + normAttr.getX(i1);
+          const ny = normAttr.getY(i0) + normAttr.getY(i1);
+          const nz = normAttr.getZ(i0) + normAttr.getZ(i1);
+          const len = Math.hypot(nx, ny, nz) || 1.0;
+          normAttr.setXYZ(i0, nx / len, ny / len, nz / len);
+          normAttr.setXYZ(i1, nx / len, ny / len, nz / len);
+        }
+        normAttr.needsUpdate = true;
+        const colors = new Float32Array(pos.count * 3);
+
+        for (let i = 0; i < pos.count; i++) {
+          const dx = dirCache[i * 3];
+          const dy = dirCache[i * 3 + 1];
+          const dz = dirCache[i * 3 + 2];
+          const ny = normAttr.getY(i);
+          const disp = dispCache[i];
+
+          const dispNorm = clamp((disp / maxDisp + 1.0) * 0.5, 0, 1);
+          const creviceShade = STYLE.rockCreviceMin + (1.0 - STYLE.rockCreviceMin) * Math.pow(dispNorm, 0.85);
+          const patchA = valueNoise3D(dx * 3.4 + 2.1, dy * 3.4 + 6.4, dz * 3.4 + 1.3, cfg.seed + 31);
+          const patchB = valueNoise3D(dx * 5.8 - 4.2, dy * 5.8 + 2.7, dz * 5.8 - 3.1, cfg.seed + 47);
+
+          tmpColor.copy(baseCol);
+          // 石灰藻の暗赤褐色パッチ
+          tmpColor.lerp(corallineCol, smoothstep(patchA, 0.42, 0.82) * 0.65);
+          // 上向き面の深い苔・海藻斑（favorite-01.png の主役岩頂部・左崖テラスの緑苔）
+          const mossAmt = smoothstep(ny, 0.36, 0.84) * smoothstep(patchB, 0.38, 0.78) * (cfg.moss ?? 0.75) * 0.72;
+          tmpColor.lerp(mossCol, mossAmt);
+          // 鋭い稜線のわずかな石灰質ハイライト
+          const ridgeAmt = smoothstep(dispNorm, 0.72, 0.98) * smoothstep(ny, 0.15, 0.75) * 0.24;
+          tmpColor.lerp(hiCol, ridgeAmt);
+
+          const microVar = 1.0 + (patchB * 2 - 1) * STYLE.rockColorVariance * 0.55;
+          const totalShade = clamp(creviceShade * microVar, STYLE.rockCreviceMin * 0.85, 1.12);
+          tmpColor.multiplyScalar(totalShade);
+
+          colors[i * 3] = tmpColor.r;
+          colors[i * 3 + 1] = tmpColor.g;
+          colors[i * 3 + 2] = tmpColor.b;
+        }
+
+        geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        const mesh = new THREE.Mesh(geo, rockMat);
+        mesh.position.set(cfg.x, posY, cfg.z);
+        mesh.name = cfg.name || `rock-${idx + 1}`;
+        group.add(mesh);
+
+        // 砂床接触影用ディスクを登録
+        shadowDiscs.push({
+          x: cfg.x,
+          z: cfg.z,
+          rx: Math.max(0.35, cfg.r * Math.max(cfg.sx, cfg.sz) * 1.15),
+          rz: Math.max(0.35, cfg.r * Math.max(cfg.sz, cfg.sx) * 0.95),
+          strength: cfg.hero ? 0.60 : 0.44,
+        });
+      }
+
+      return { group, material: rockMat, updateCaustics, shadowDiscs };
+    }
+
+    // ===== 部品：瀬戸内海の生活感・沈んだ構造物群 (buildSunkenProps) =====
+    // favorite-01.png の「土管クラスター・白コルゲート管・蛸壺・錆びた魚礁ボックス・沈んだ木樽・流木・小石群」を関数分離
+    function buildSunkenProps(propTex, rockTex) {
+      const group = new THREE.Group();
+      group.name = 'sunken-props';
+      const props = [];
+      const shadowDiscs = [];
+      const causticUpdaters = [];
+
+      const makePropMat = (tex, bumpTex, opts = {}) => {
+        const mat = new THREE.MeshStandardMaterial({
+          map: tex,
+          color: opts.color ?? 0xffffff,
+          roughness: opts.roughness ?? 0.90,
+          metalness: opts.metalness ?? 0.05,
+          bumpMap: bumpTex ?? null,
+          bumpScale: opts.bumpScale ?? 0.16,
+        });
+        causticUpdaters.push(applyCaustics(mat, { mode: 'rock', gain: opts.causticGain ?? 0.15, cacheTag: opts.cacheTag }));
+        return mat;
+      };
+
+      const clayMat = makePropMat(propTex.clayPipe, rockTex.bump, { roughness: 0.92, bumpScale: 0.18, cacheTag: 'prop-clay' });
+      const clayDarkMat = makePropMat(propTex.clayPipe, rockTex.bump, { color: 0x382818, roughness: 0.96, bumpScale: 0.12, causticGain: 0.04, cacheTag: 'prop-clay-in' });
+      const terraMat = makePropMat(propTex.clayPipe, rockTex.bump, { color: 0xb06d4a, roughness: 0.88, bumpScale: 0.16, cacheTag: 'prop-terra' });
+      const palePipeMat = makePropMat(propTex.palePipe, rockTex.bump, { roughness: 0.84, bumpScale: 0.22, cacheTag: 'prop-pale' });
+      const rustMat = makePropMat(propTex.rustIron, rockTex.bump, { roughness: 0.86, metalness: 0.24, bumpScale: 0.24, cacheTag: 'prop-rust' });
+      const woodMat = makePropMat(propTex.barrelWood, rockTex.bump, { roughness: 0.88, metalness: 0.04, bumpScale: 0.20, cacheTag: 'prop-wood' });
+      const hoopMat = makePropMat(propTex.rustIron, rockTex.bump, { color: 0x463026, roughness: 0.72, metalness: 0.52, bumpScale: 0.15, cacheTag: 'prop-hoop' });
+      const cobbleMat = makePropMat(rockTex.map, rockTex.bump, { color: 0x5c362c, roughness: 0.94, bumpScale: 0.28, cacheTag: 'prop-cobble' });
+
+      // ヘルパー：厚みのある中空円筒（土管）を LatheGeometry で生成（内壁まで実造形）
+      function createHollowPipeMesh(outerR, innerR, len, mat, bellEnd = true) {
+        const hl = len * 0.5;
+        const pts = [
+          new THREE.Vector2(innerR, -hl),
+          new THREE.Vector2(outerR, -hl),
+          new THREE.Vector2(outerR, hl * 0.78),
+        ];
+        if (bellEnd) {
+          pts.push(
+            new THREE.Vector2(outerR * 1.12, hl * 0.84),
+            new THREE.Vector2(outerR * 1.12, hl),
+            new THREE.Vector2(innerR * 1.04, hl),
+            new THREE.Vector2(innerR, hl * 0.86)
+          );
+        } else {
+          pts.push(
+            new THREE.Vector2(outerR, hl),
+            new THREE.Vector2(innerR, hl)
+          );
+        }
+        pts.push(new THREE.Vector2(innerR, -hl));
+        const geo = new THREE.LatheGeometry(pts, 28);
+        geo.rotateX(Math.PI / 2); // 軸を +Z 向きに揃える
+        geo.computeVertexNormals();
+        const mesh = new THREE.Mesh(geo, mat);
+        // 内部奥の暗影コア（管の中が本物のように暗く見える）
+        const innerPlug = new THREE.Mesh(
+          new THREE.CylinderGeometry(innerR * 0.97, innerR * 0.97, len * 0.84, 20, 1, true),
+          clayDarkMat
+        );
+        innerPlug.rotation.x = Math.PI / 2;
+        innerPlug.material.side = THREE.BackSide;
+        const wrap = new THREE.Group();
+        wrap.add(mesh);
+        wrap.add(innerPlug);
+        return wrap;
+      }
+
+      // ヘルパー：円孔が開いた四角枠ブロック（角型土管・魚礁ボックス）
+      function createPerforatedSquareBlock(sizeW, sizeH, depth, holeR, mat) {
+        const hw = sizeW * 0.5;
+        const hh = sizeH * 0.5;
+        const ch = Math.min(hw, hh) * 0.14;
+        const shape = new THREE.Shape();
+        shape.moveTo(-hw + ch, -hh);
+        shape.lineTo( hw - ch, -hh);
+        shape.lineTo( hw, -hh + ch);
+        shape.lineTo( hw,  hh - ch);
+        shape.lineTo( hw - ch,  hh);
+        shape.lineTo(-hw + ch,  hh);
+        shape.lineTo(-hw,  hh - ch);
+        shape.lineTo(-hw, -hh + ch);
+        shape.closePath();
+
+        const hole = new THREE.Path();
+        hole.absarc(0, 0, holeR, 0, Math.PI * 2, true);
+        shape.holes.push(hole);
+
+        const geo = new THREE.ExtrudeGeometry(shape, {
+          depth,
+          bevelEnabled: true,
+          bevelThickness: 0.008,
+          bevelSize: 0.008,
+          bevelSegments: 2,
+          curveSegments: 20,
+        });
+        geo.translate(0, 0, -depth * 0.5);
+        geo.computeVertexNormals();
+        return new THREE.Mesh(geo, mat);
+      }
+
+      // --- 1. 手前左の土管クラスター（favorite-01.png 左下：丸土管 2 本＋上に載る角孔管＋横の小土管） ---
+      const pipeCluster = new THREE.Group();
+      pipeCluster.name = 'prop-clay-pipes';
+
+      const pipeL = createHollowPipeMesh(0.185, 0.138, 0.52, clayMat, true);
+      pipeL.position.set(-1.74, 0.14, 2.24);
+      pipeL.rotation.set(-0.04, 0.24, 0.03);
+      pipeCluster.add(pipeL);
+
+      const pipeR = createHollowPipeMesh(0.172, 0.128, 0.50, clayMat, true);
+      pipeR.position.set(-1.35, 0.13, 2.21);
+      pipeR.rotation.set(-0.03, 0.16, -0.02);
+      pipeCluster.add(pipeR);
+
+      const topCulvert = createPerforatedSquareBlock(0.24, 0.24, 0.44, 0.082, clayMat);
+      topCulvert.position.set(-1.55, 0.34, 2.19);
+      topCulvert.rotation.set(-0.05, 0.20, -0.09);
+      pipeCluster.add(topCulvert);
+
+      const smallPotPipe = createHollowPipeMesh(0.112, 0.082, 0.34, terraMat, true);
+      smallPotPipe.position.set(-1.08, 0.095, 2.46);
+      smallPotPipe.rotation.set(-0.08, 0.22, 0.04);
+      pipeCluster.add(smallPotPipe);
+
+      group.add(pipeCluster);
+      props.push(pipeCluster);
+      shadowDiscs.push({ x: -1.52, z: 2.26, rx: 0.72, rz: 0.44, strength: 0.56 });
+
+      // --- 2. 主役岩の左斜面に立て掛けられた白コルゲート管（favorite-01.png の白い斜めパイプ） ---
+      const corrPts = [];
+      const corrLen = 0.66;
+      const corrSteps = 36;
+      for (let i = 0; i <= corrSteps; i++) {
+        const t = i / corrSteps;
+        const y = (t - 0.5) * corrLen;
+        const rib = 0.070 + 0.010 * Math.sin(t * Math.PI * 2 * 16);
+        corrPts.push(new THREE.Vector2(rib, y));
+      }
+      const corrGeo = new THREE.LatheGeometry(corrPts, 20);
+      corrGeo.computeVertexNormals();
+      const leaningPipe = new THREE.Mesh(corrGeo, palePipeMat);
+      leaningPipe.name = 'prop-leaning-pipe';
+      leaningPipe.position.set(-0.76, 0.25, 2.52);
+      leaningPipe.rotation.set(-0.22, 0.16, -0.68);
+      group.add(leaningPipe);
+      props.push(leaningPipe);
+
+      // --- 3. 手前右の錆びた魚礁ボックス 2 基＋沈んだ木樽＋赤茶の小石群（favorite-01.png 右下） ---
+      const rightReefSet = new THREE.Group();
+      rightReefSet.name = 'prop-reef-boxes-and-barrel';
+
+      // 錆びた中空魚礁ボックス（前後・左右 4 面を円孔パネルで組む）
+      const makeRustCube = (size, holeR) => {
+        const g = new THREE.Group();
+        const wallT = 0.028;
+        const panelF = createPerforatedSquareBlock(size, size, wallT, holeR, rustMat);
+        panelF.position.z = size * 0.5 - wallT * 0.5;
+        const panelB = createPerforatedSquareBlock(size, size, wallT, holeR, rustMat);
+        panelB.position.z = -size * 0.5 + wallT * 0.5;
+        const panelL = createPerforatedSquareBlock(size - wallT * 2, size, wallT, holeR * 0.85, rustMat);
+        panelL.rotation.y = Math.PI / 2;
+        panelL.position.x = -size * 0.5 + wallT * 0.5;
+        const panelR = createPerforatedSquareBlock(size - wallT * 2, size, wallT, holeR * 0.85, rustMat);
+        panelR.rotation.y = Math.PI / 2;
+        panelR.position.x = size * 0.5 - wallT * 0.5;
+        const topPlate = new THREE.Mesh(new THREE.BoxGeometry(size, wallT, size), rustMat);
+        topPlate.position.y = size * 0.5 - wallT * 0.5;
+        const botPlate = new THREE.Mesh(new THREE.BoxGeometry(size, wallT, size), rustMat);
+        botPlate.position.y = -size * 0.5 + wallT * 0.5;
+        g.add(panelF, panelB, panelL, panelR, topPlate, botPlate);
+        return g;
+      };
+
+      const rustBoxA = makeRustCube(0.28, 0.088);
+      rustBoxA.position.set(1.04, 0.11, 2.26);
+      rustBoxA.rotation.set(0.06, -0.28, 0.12);
+      rightReefSet.add(rustBoxA);
+
+      const rustBoxB = makeRustCube(0.25, 0.078);
+      rustBoxB.position.set(1.36, 0.10, 2.28);
+      rustBoxB.rotation.set(-0.08, 0.22, -0.07);
+      rightReefSet.add(rustBoxB);
+
+      // 沈んだ木樽（膨らみのある樽断面＋鉄輪 3 本、砂に半分埋もれて横倒し）
+      const barrelGroup = new THREE.Group();
+      barrelGroup.name = 'prop-sunken-barrel';
+      const bPts = [
+        new THREE.Vector2(0.001, -0.22),
+        new THREE.Vector2(0.145, -0.22),
+        new THREE.Vector2(0.155, -0.24),
+        new THREE.Vector2(0.188, -0.10),
+        new THREE.Vector2(0.198,  0.00),
+        new THREE.Vector2(0.188,  0.10),
+        new THREE.Vector2(0.155,  0.24),
+        new THREE.Vector2(0.145,  0.22),
+        new THREE.Vector2(0.001,  0.22),
+      ];
+      const barrelGeo = new THREE.LatheGeometry(bPts, 24);
+      barrelGeo.computeVertexNormals();
+      const barrelBody = new THREE.Mesh(barrelGeo, woodMat);
+      barrelGroup.add(barrelBody);
+      for (const [hy, hr] of [[-0.175, 0.173], [0.0, 0.200], [0.175, 0.173]]) {
+        const hoop = new THREE.Mesh(new THREE.CylinderGeometry(hr, hr, 0.024, 24, 1, true), hoopMat);
+        hoop.position.y = hy;
+        barrelGroup.add(hoop);
+      }
+      barrelGroup.position.set(1.74, 0.145, 2.20);
+      barrelGroup.rotation.set(0.12, -0.42, Math.PI * 0.5 + 0.08);
+      rightReefSet.add(barrelGroup);
+
+      group.add(rightReefSet);
+      props.push(rightReefSet);
+      shadowDiscs.push({ x: 1.38, z: 2.26, rx: 0.78, rz: 0.44, strength: 0.54 });
+
+      // 魚礁ボックス＆土管周囲のゴロタ小石（赤茶の砕石を独立グループに分離して砂に埋め込む）
+      const cobbleGroup = new THREE.Group();
+      cobbleGroup.name = 'prop-cobbles';
+      const cobbleRand = makePrng(5117);
+      const cobbleCenters = [
+        [0.82, 2.36, 0.09], [0.96, 2.42, 0.08], [1.16, 2.44, 0.10], [1.34, 2.45, 0.085],
+        [1.52, 2.40, 0.095], [1.68, 2.42, 0.08], [1.88, 2.36, 0.09], [1.22, 2.12, 0.08],
+        [-1.95, 2.38, 0.085], [-1.58, 2.44, 0.075], [-1.22, 2.45, 0.09], [-0.88, 2.46, 0.08],
+        [-2.30, 2.26, 0.095], [2.06, 2.30, 0.09], [2.90, 2.30, 0.085], [0.22, 2.47, 0.08],
+      ];
+      for (let i = 0; i < cobbleCenters.length; i++) {
+        const [cx, cz, cr] = cobbleCenters[i];
+        const cg = new THREE.DodecahedronGeometry(cr, 1);
+        const cp = cg.attributes.position;
+        for (let k = 0; k < cp.count; k++) {
+          const vx = cp.getX(k);
+          const vy = cp.getY(k);
+          const vz = cp.getZ(k);
+          const f = 0.80 + cobbleRand() * 0.36;
+          cp.setXYZ(k, vx * f * 1.2, vy * f * 0.68, vz * f * 1.05);
+        }
+        cg.computeVertexNormals();
+        const cMesh = new THREE.Mesh(cg, cobbleMat);
+        const sy = sampleSandHeight(cx, cz);
+        cMesh.position.set(cx, sy + cr * 0.14, cz);
+        cMesh.rotation.set(cobbleRand() * 0.4, cobbleRand() * Math.PI * 2, cobbleRand() * 0.4);
+        cMesh.name = `prop-cobble-${i + 1}`;
+        cobbleGroup.add(cMesh);
+      }
+      group.add(cobbleGroup);
+      props.push(cobbleGroup);
+
+      // --- 4. 左手前砂地の沈木・流木（low profile, 砂に半分埋まる） ---
+      const driftGroup = new THREE.Group();
+      driftGroup.name = 'prop-driftwood';
+      const trunkCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(-3.18, -0.02, 2.18),
+        new THREE.Vector3(-2.82,  0.07, 2.12),
+        new THREE.Vector3(-2.46,  0.11, 2.22),
+        new THREE.Vector3(-2.18,  0.03, 2.16),
+      ]);
+      const trunkMesh = new THREE.Mesh(new THREE.TubeGeometry(trunkCurve, 18, 0.068, 10, false), woodMat);
+      driftGroup.add(trunkMesh);
+      const branchCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(-2.72, 0.08, 2.14),
+        new THREE.Vector3(-2.55, 0.18, 2.02),
+        new THREE.Vector3(-2.42, 0.21, 1.96),
+      ]);
+      const branchMesh = new THREE.Mesh(new THREE.TubeGeometry(branchCurve, 10, 0.032, 8, false), woodMat);
+      driftGroup.add(branchMesh);
+      group.add(driftGroup);
+      props.push(driftGroup);
+      shadowDiscs.push({ x: -2.68, z: 2.16, rx: 0.62, rz: 0.28, strength: 0.40 });
+
+      // --- 5. 右手前岩陰の素焼き蛸壺（瀬戸内海らしい生活感） ---
+      const jarPts = [
+        new THREE.Vector2(0.001, -0.17),
+        new THREE.Vector2(0.085, -0.16),
+        new THREE.Vector2(0.125, -0.04),
+        new THREE.Vector2(0.118,  0.06),
+        new THREE.Vector2(0.078,  0.13),
+        new THREE.Vector2(0.095,  0.17),
+        new THREE.Vector2(0.076,  0.17),
+        new THREE.Vector2(0.064,  0.12),
+        new THREE.Vector2(0.092, -0.04),
+      ];
+      const jarGeo = new THREE.LatheGeometry(jarPts, 20);
+      jarGeo.computeVertexNormals();
+      const amphora = new THREE.Mesh(jarGeo, terraMat);
+      amphora.name = 'prop-amphora';
+      amphora.position.set(3.22, 0.09, 2.14);
+      amphora.rotation.set(0.15, -0.65, Math.PI * 0.44);
+      group.add(amphora);
+      props.push(amphora);
+      shadowDiscs.push({ x: 3.22, z: 2.14, rx: 0.28, rz: 0.24, strength: 0.42 });
+
+      const updateCaustics = (t) => {
+        for (const fn of causticUpdaters) fn(t);
+      };
+
+      return { group, props, updateCaustics, shadowDiscs };
+    }
+
+    // ===== 部品：ゆらめく海藻・有機ケルプ葉群 (buildSeaweed) =====
+    // 波打つ葉縁テクスチャ付きの自然な濃緑褐色の海藻を、左崖と奥岩礁の窪みに非対称に群生させる
+    function buildSeaweed() {
+      const group = new THREE.Group();
+      group.name = 'seaweed';
+
+      // 有機的な波打ち葉縁の海藻テクスチャ（中央主脈＋うねる半透明葉縁）
+      const kCanvas = document.createElement('canvas');
+      kCanvas.width = 64;
+      kCanvas.height = 256;
+      const kCtx = kCanvas.getContext('2d');
+      kCtx.clearRect(0, 0, 64, 256);
+      for (let y = 0; y < 256; y++) {
+        const v = 1.0 - y / 255; // 0: root, 1: tip
+        const halfW = (20 * Math.sin(Math.pow(v, 0.72) * Math.PI) + 3.5) * (0.76 + 0.24 * Math.sin(v * 24.0));
+        const shift = Math.sin(v * 11.0) * 5.0;
+        const cx = 32 + shift;
+        const x0 = Math.max(0, Math.floor(cx - halfW));
+        const x1 = Math.min(63, Math.ceil(cx + halfW));
+        for (let x = x0; x <= x1; x++) {
+          const edge = Math.abs(x - cx) / Math.max(halfW, 1);
+          const midrib = Math.exp(-Math.pow(edge * 4.5, 2));
+          const r = Math.round(32 + midrib * 20 + v * 16);
+          const g = Math.round(58 + midrib * 28 + v * 26);
+          const b = Math.round(28 + midrib * 10 + v * 12);
+          const alpha = clamp(1.0 - Math.pow(edge, 3.2), 0, 1);
+          kCtx.fillStyle = `rgba(${r},${g},${b},${alpha.toFixed(2)})`;
+          kCtx.fillRect(x, y, 1, 1);
+        }
+      }
+      const kelpTex = new THREE.CanvasTexture(kCanvas);
+      kelpTex.colorSpace = THREE.SRGBColorSpace;
+
+      const kelpMat = new THREE.MeshStandardMaterial({
+        map: kelpTex,
+        alphaTest: 0.18,
+        roughness: 0.78,
+        metalness: 0.02,
+        side: THREE.DoubleSide,
+      });
+      const updateCaustics = applyCaustics(kelpMat, {
+        mode: 'rock',
+        gain: 0.10,
+        underwaterScatterRate: 0.13,
+        cacheTag: 'kelp-uw-v6',
+      });
+
+      // 左崖・左奥岩礁の窪みに自然な房として偏在配置（中央を均等に並べない）
+      const strandSpecs = [
+        // 左奥テラスのケルプ房
+        { x: -3.42, y: 0.92, z: -2.02, h: 1.05, w: 0.24, leanX:  0.22, leanZ: 0.10, rotY:  0.35, phase: 0.3, period: 7.4 },
+        { x: -3.26, y: 0.88, z: -2.14, h: 0.88, w: 0.20, leanX:  0.16, leanZ: 0.12, rotY: -0.45, phase: 1.2, period: 8.2 },
+        { x: -2.96, y: 0.78, z: -2.06, h: 0.96, w: 0.22, leanX:  0.24, leanZ: 0.08, rotY:  0.75, phase: 2.4, period: 6.9 },
+        // 左中段崖の低い海藻房（x <= -3.55）
+        { x: -3.68, y: 0.72, z: -1.18, h: 0.72, w: 0.22, leanX:  0.18, leanZ: 0.14, rotY:  1.15, phase: 1.7, period: 6.6 },
+        { x: -3.62, y: 0.64, z: -0.96, h: 0.58, w: 0.18, leanX:  0.14, leanZ: 0.10, rotY:  0.40, phase: 3.1, period: 7.5 },
+        { x: -3.66, y: 0.55, z:  0.28, h: 0.64, w: 0.20, leanX:  0.15, leanZ: 0.12, rotY:  1.30, phase: 4.2, period: 7.9 },
+        // 奥左中〜奥右の岩陰アクセント（控えめな丈で青い水の抜けを邪魔しない）
+        { x: -2.12, y: 0.58, z: -2.16, h: 0.76, w: 0.21, leanX:  0.18, leanZ: 0.08, rotY: -0.25, phase: 2.9, period: 8.4 },
+        { x: -1.94, y: 0.54, z: -2.22, h: 0.62, w: 0.18, leanX:  0.12, leanZ: 0.10, rotY:  0.60, phase: 4.7, period: 7.1 },
+        { x:  2.76, y: 0.66, z: -2.14, h: 0.78, w: 0.22, leanX: -0.18, leanZ: 0.09, rotY:  0.50, phase: 3.8, period: 8.0 },
+        { x:  2.98, y: 0.62, z: -2.20, h: 0.64, w: 0.19, leanX: -0.14, leanZ: 0.11, rotY: -0.65, phase: 5.3, period: 7.3 },
+        { x:  3.62, y: 0.64, z: -1.48, h: 0.68, w: 0.20, leanX: -0.16, leanZ: 0.10, rotY: -1.10, phase: 0.8, period: 6.8 },
+        { x:  3.66, y: 0.52, z:  0.65, h: 0.54, w: 0.18, leanX: -0.12, leanZ: 0.08, rotY: -1.35, phase: 2.1, period: 7.7 },
+      ];
+
+      const strands = strandSpecs.map((sp, idx) => {
+        const segY = 14;
+        const geo = new THREE.PlaneGeometry(sp.w, sp.h, 2, segY);
+        geo.translate(0, sp.h * 0.5, 0);
+        const pos = geo.attributes.position;
+        const basePos = new Float32Array(pos.array);
+        const mesh = new THREE.Mesh(geo, kelpMat);
+        mesh.position.set(sp.x, sp.y, sp.z);
+        mesh.rotation.y = sp.rotY ?? 0;
+        mesh.name = `seaweed-${idx + 1}`;
+        group.add(mesh);
+        return { mesh, geo, pos, basePos, sp };
+      });
+
+      const update = (elapsed) => {
+        updateCaustics(elapsed);
+        for (const st of strands) {
+          const { pos, basePos, sp } = st;
+          const w = (Math.PI * 2) / sp.period;
+          for (let i = 0; i < pos.count; i++) {
+            const bx = basePos[i * 3];
+            const by = basePos[i * 3 + 1];
+            const bz = basePos[i * 3 + 2];
+            const f = clamp(by / sp.h, 0, 1);
+            const flex = f * f;
+            const waveX = Math.sin(elapsed * w + sp.phase - f * 2.6) * 0.11 * flex + sp.leanX * flex;
+            const waveZ = Math.cos(elapsed * w * 0.82 + sp.phase * 1.3 - f * 2.2) * 0.09 * flex + sp.leanZ * flex;
+            const wy = Math.min(by, WATER_Y - 0.16 - sp.y);
+            pos.setXYZ(i, bx + waveX, wy, bz + waveZ);
+          }
+          pos.needsUpdate = true;
+          st.geo.computeVertexNormals();
+        }
+      };
+
+      update(0);
+      return { group, strands, update };
+    }
+
+    // ===== 部品：水面 (y=2.6, sin波で ±0.019m, 裏面の波紋きらめきバンプ付き) =====
+    function buildWaterSurface(options = {}) {
+      const geo = new THREE.PlaneGeometry(TANK_W, TANK_D, 54, 33);
+      geo.rotateX(-Math.PI / 2);
+      const pos = geo.attributes.position;
+      const baseXZ = new Float32Array(pos.count * 2);
+      for (let i = 0; i < pos.count; i++) {
+        baseXZ[i * 2] = pos.getX(i);
+        baseXZ[i * 2 + 1] = pos.getZ(i);
+      }
+      const rippleTex = options.rippleTex ?? buildWaterRippleTexture();
+      const mat = new THREE.MeshStandardMaterial({
+        color: options.color ?? STYLE.waterColor,
+        transparent: true,
+        opacity: options.opacity ?? STYLE.waterOpacity,
+        side: THREE.DoubleSide,
+        roughness: options.roughness ?? STYLE.waterRoughness,
+        metalness: options.metalness ?? STYLE.waterMetalness,
+        envMapIntensity: options.envMapIntensity ?? STYLE.waterEnvMapIntensity,
+        envMap: options.envMap ?? null,
+        bumpMap: rippleTex,
+        bumpScale: options.bumpScale ?? STYLE.waterBumpScale,
+        depthWrite: false,
+        fog: false,
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.y = WATER_Y;
+      mesh.name = 'water-surface';
+      mesh.renderOrder = 2;
+
+      const update = (elapsed) => {
+        const w1 = (Math.PI * 2) / 7.5;
+        const w2 = (Math.PI * 2) / 10.5;
+        for (let i = 0; i < pos.count; i++) {
+          const x = baseXZ[i * 2];
+          const z = baseXZ[i * 2 + 1];
+          const dy = 0.011 * Math.sin(x * 0.85 + z * 0.40 + elapsed * w1)
+                   + 0.008 * Math.sin(-x * 0.50 + z * 1.05 + elapsed * w2);
+          pos.setY(i, dy);
+        }
+        pos.needsUpdate = true;
+        geo.computeVertexNormals();
+        rippleTex.offset.set(elapsed * 0.018, -elapsed * 0.013);
+      };
+
+      update(0);
+      return { mesh, update };
+    }
+
+    // ===== 環境・水槽シーンの組み立て =====
+    const grainTex = buildGrainTexture();
+    const sandTex = buildSandTexture();
+    const rockTex = buildRockTexture();
+    const propTex = buildPropTextures();
+    const rippleTex = buildWaterRippleTexture();
+
+    const viewingRoom = buildViewingRoom();
+    scene.add(viewingRoom.group);
+
+    const backdrop = buildBackdropGradient();
+    scene.add(backdrop.mesh);
+
+    const cabinet = buildCabinet({ grainTex });
+    scene.add(cabinet.group);
+
+    const rockResult = buildRocks(rockTex);
+    const rockGroup = rockResult.group;
+    scene.add(rockGroup);
+
+    const propsResult = buildSunkenProps(propTex, rockTex);
+    scene.add(propsResult.group);
+
+    const allShadowDiscs = [...rockResult.shadowDiscs, ...propsResult.shadowDiscs];
+    const sandResult = buildSandFloor(sandTex, allShadowDiscs);
+    scene.add(sandResult.mesh);
+
+    const seaweedResult = buildSeaweed();
+    scene.add(seaweedResult.group);
+
+    const surfaceGlow = buildSurfaceGlow();
+    scene.add(surfaceGlow.mesh);
+
+    const water = buildWaterSurface({ envMap: scene.environment, rippleTex });
+    scene.add(water.mesh);
+
+    const lightRays = buildLightRays();
+    scene.add(lightRays.group);
+
+    const marineSnow = buildMarineSnow();
+    for (const pts of marineSnow.points) scene.add(pts);
+
+    const glassTank = buildGlassTank({ envMap: scene.environment });
+    scene.add(glassTank.group);
+
+    // ===== 状態・検証用フック (__MYAQ) =====
+    const schoolAgents = [];
+    const otherFishAgents = [];
+    const squidAgents = [];
+
+    const residentTotalEl = document.getElementById('resident-total');
+    const schoolLabelEl = document.getElementById('school-label');
+    const btnDecEl = document.getElementById('btn-school-dec');
+    const btnIncEl = document.getElementById('btn-school-inc');
+    const btnAutoCamEl = document.getElementById('btn-auto-cam');
+    const statusOverlayEl = document.getElementById('status-overlay');
+    const statusBoxEl = document.getElementById('status-box');
+
+    function computeCounts() {
+      const katakuchi = schoolAgents.length;
+      let aji = 0, madai = 0, kurodai = 0, buri = 0;
+      for (const f of otherFishAgents) {
+        if (f.species === 'aji') aji++;
+        else if (f.species === 'madai') madai++;
+        else if (f.species === 'kurodai') kurodai++;
+        else if (f.species === 'buri') buri++;
+      }
+      const squid = squidAgents.length;
+      return {
+        katakuchi,
+        aji,
+        madai,
+        kurodai,
+        buri,
+        squid,
+        total: katakuchi + aji + madai + kurodai + buri + squid,
+      };
+    }
+
+    const _centerTmp = new THREE.Vector3();
+    function getAllPositions() {
+      const out = [];
+      for (const f of schoolAgents) {
+        const p = f.actor.object.position;
+        out.push([p.x, p.y, p.z]);
+      }
+      for (const f of otherFishAgents) {
+        const p = f.actor.object.position;
+        out.push([p.x, p.y, p.z]);
+      }
+      for (const s of squidAgents) {
+        s.actor.getCenter(_centerTmp);
+        out.push([_centerTmp.x, _centerTmp.y, _centerTmp.z]);
+      }
+      return out;
+    }
+
+    function getSchoolCentroid() {
+      if (schoolAgents.length === 0) return [0, 0, 0];
+      let sx = 0, sy = 0, sz = 0;
+      for (const f of schoolAgents) {
+        const p = f.actor.object.position;
+        sx += p.x;
+        sy += p.y;
+        sz += p.z;
+      }
+      const n = schoolAgents.length;
+      return [sx / n, sy / n, sz / n];
+    }
+
+    function computeSchoolSpread() {
+      const n = schoolAgents.length;
+      if (n === 0) return { rms: 0, maxDist: 0, count: 0 };
+      const [cx, cy, cz] = getSchoolCentroid();
+      let sumSq = 0;
+      let maxDist = 0;
+      for (const f of schoolAgents) {
+        const p = f.actor.object.position;
+        const dx = p.x - cx;
+        const dy = p.y - cy;
+        const dz = p.z - cz;
+        const d2 = dx * dx + dy * dy + dz * dz;
+        sumSq += d2;
+        const d = Math.sqrt(d2);
+        if (d > maxDist) maxDist = d;
+      }
+      return {
+        rms: Math.sqrt(sumSq / n),
+        maxDist,
+        count: n,
+      };
+    }
+
+    function inspectScene() {
+      let egiVisibleCount = 0;
+      let lineVisibleCount = 0;
+      scene.traverse((obj) => {
+        if (obj.name && obj.name.toLowerCase().includes('egi') && obj.visible) {
+          egiVisibleCount++;
+        }
+      });
+      const squids = squidAgents.map((s) => {
+        if (s.actor.egi?.obj?.visible) egiVisibleCount++;
+        if (s.actor.line?.visible) lineVisibleCount++;
+        const c = s.actor.getCenter(new THREE.Vector3());
+        return {
+          home: [s.actor.brain.home.x, s.actor.brain.home.y, s.actor.brain.home.z],
+          center: [c.x, c.y, c.z],
+          motion: s.actor.motion,
+          egiVisible: Boolean(s.actor.egi?.obj?.visible),
+          egiShown: Boolean(s.actor.brain?.egiShown),
+          targetColor: {
+            dark: s.actor.squid.target.dark,
+            pale: s.actor.squid.target.pale,
+            cloud: s.actor.squid.target.cloud,
+          },
+          uniformColor: {
+            uDark: s.actor.squid.uniforms.uDark.value,
+            uPale: s.actor.squid.uniforms.uPale.value,
+            uCloud: s.actor.squid.uniforms.uCloud.value,
+          },
+        };
+      });
+      return {
+        simTime,
+        squids,
+        egiVisibleCount,
+        lineVisibleCount,
+        rockCount: rockGroup.children.length,
+        cameraPos: [camera.position.x, camera.position.y, camera.position.z],
+        targetPos: [controls.target.x, controls.target.y, controls.target.z],
+      };
+    }
+
+    function collectObjectBounds(list) {
+      return list.map((m) => {
+        m.updateMatrixWorld(true);
+        const box = new THREE.Box3().setFromObject(m);
+        const cx = (box.min.x + box.max.x) * 0.5;
+        const cz = (box.min.z + box.max.z) * 0.5;
+        const sandY = sampleSandHeight(cx, cz);
+        const insideTank =
+          box.min.x >= -HALF_X + 0.02 && box.max.x <= HALF_X - 0.02 &&
+          box.min.z >= -HALF_Z + 0.02 && box.max.z <= HALF_Z - 0.02 &&
+          box.min.y >= -0.45 && box.max.y <= WATER_Y - 0.04;
+        const grounded = box.min.y <= sandY + 0.06;
+        return {
+          name: m.name,
+          min: box.min.toArray(),
+          max: box.max.toArray(),
+          sandY,
+          insideTank,
+          grounded,
+        };
+      });
+    }
+
+    const myaq = {
+      ready: false,
+      get counts() {
+        return computeCounts();
+      },
+      positions: getAllPositions,
+      schoolCentroid: getSchoolCentroid,
+      inspect: inspectScene,
+      v2: {
+        cabinet: Boolean(cabinet.pedestal),
+        glassCount: glassTank.glassMeshes.length,
+        frameCount: glassTank.frameMeshes.length,
+        particleCount: marineSnow.count,
+        particleSample: () => marineSnow.sample(10),
+        causticsTime: () => sandResult.updateCaustics.uniforms.uCausticTime.value,
+        get rayCount() { return lightRays.rays.length; },
+        get rockCount() { return rockGroup.children.length; },
+        get bgColor() { return scene.background.getHex(); },
+        get cameraFov() { return camera.fov; },
+        rayOpacities: () => lightRays.rays.map((r) => r.mesh.material.opacity),
+        particlesOutOfBounds: () => marineSnow.countOutOfBounds(),
+        glassMaxOpacity: () => Math.max(...glassTank.glassMeshes.map((m) => m.material.opacity)),
+        glassEnvMapIntensity: glassTank.glassMeshes[0].material.envMapIntensity,
+        waterEnvMapIntensity: water.mesh.material.envMapIntensity,
+        waterOpacity: water.mesh.material.opacity,
+        glassMaterialInfo: () => ({
+          color: glassTank.glassMeshes[0].material.color.getHex(),
+          opacity: glassTank.glassMeshes[0].material.opacity,
+          roughness: glassTank.glassMeshes[0].material.roughness,
+          envMapIntensity: glassTank.glassMeshes[0].material.envMapIntensity,
+        }),
+        waterMaterialInfo: () => ({
+          color: water.mesh.material.color.getHex(),
+          opacity: water.mesh.material.opacity,
+          roughness: water.mesh.material.roughness,
+          envMapIntensity: water.mesh.material.envMapIntensity,
+        }),
+        particleLayers: () => marineSnow.points.map((pts) => ({
+          name: pts.name,
+          count: pts.geometry.attributes.position.count,
+          size: pts.material.size,
+          opacity: pts.material.opacity,
+          color: pts.material.color.getHex(),
+        })),
+        causticsInfo: () => ({
+          scale1: STYLE.causticsScale1,
+          scale2: STYLE.causticsScale2,
+          speed1: STYLE.causticsSpeed1,
+          speed2: STYLE.causticsSpeed2,
+          pow: STYLE.causticsPow,
+          sandGain: STYLE.causticsSandGain,
+          rockGain: STYLE.causticsRockGain,
+          color: STYLE.causticsColor,
+        }),
+        rayMaterialInfo: () => lightRays.rays.map((r) => ({
+          name: r.mesh.name,
+          width: r.width,
+          opacity: r.mesh.material.opacity,
+          hasAlphaMap: Boolean(r.mesh.material.alphaMap),
+        })),
+        rockMaterialInfo: () => ({
+          baseColor: STYLE.rockBaseColor,
+          vertexColors: Boolean(rockResult.material.vertexColors),
+          bumpMap: Boolean(rockResult.material.bumpMap),
+          bumpScale: rockResult.material.bumpScale,
+          roughness: rockResult.material.roughness,
+        }),
+        sandMaterialInfo: () => ({
+          baseColor: STYLE.sandBaseColor,
+          vertexColors: Boolean(sandResult.material.vertexColors),
+          bumpMap: Boolean(sandResult.material.bumpMap),
+          bumpScale: sandResult.material.bumpScale,
+          shadeVariance: STYLE.sandShadeVariance,
+          causticsGain: STYLE.causticsSandGain,
+        }),
+        rockBounds: () => rockGroup.children.map((m) => {
+          m.updateMatrixWorld(true);
+          const box = new THREE.Box3().setFromObject(m);
+          return { name: m.name, min: box.min.toArray(), max: box.max.toArray() };
+        }),
+      },
+      v3: {
+        get bgColor() {
+          return scene.background.getHex();
+        },
+        get rayCount() {
+          return lightRays.rays.length;
+        },
+        get rayWidths() {
+          return lightRays.rays.map((r) => r.width);
+        },
+        get rayOpacities() {
+          return lightRays.rays.map((r) => r.mesh.material.opacity);
+        },
+        get surfaceGlowOpacity() {
+          return surfaceGlow.mesh.material.opacity;
+        },
+        get backdropPresent() {
+          return Boolean(backdrop && backdrop.mesh && backdrop.mesh.parent === scene);
+        },
+      },
+      v4: {
+        schoolRMS: () => computeSchoolSpread().rms,
+        schoolMaxDist: () => computeSchoolSpread().maxDist,
+        schoolCount: () => schoolAgents.length,
+      },
+      v5: {
+        schoolModel: 'sardine-original',
+      },
+      v6: {
+        get roomPresent() { return Boolean(viewingRoom && viewingRoom.group.parent === scene); },
+        get waterEnclosurePresent() { return Boolean(backdrop && backdrop.mesh.parent === scene); },
+        get propCount() { return propsResult.props.length; },
+        get seaweedCount() { return seaweedResult.strands.length; },
+        propBounds: () => collectObjectBounds(propsResult.props),
+        rockCheckBounds: () => collectObjectBounds(rockGroup.children),
+        seaweedBounds: () => collectObjectBounds(seaweedResult.strands.map((s) => s.mesh)),
+        lightingInfo: () => ({
+          bgColor: scene.background.getHex(),
+          fogColor: scene.fog.color.getHex(),
+          fogDensity: scene.fog.density,
+          hemiSkyColor: hemiLight.color.getHex(),
+          hemiGroundColor: hemiLight.groundColor.getHex(),
+          hemiIntensity: hemiLight.intensity,
+          sunColor: sunLight.color.getHex(),
+          sunIntensity: sunLight.intensity,
+          sunPosition: sunLight.position.toArray(),
+          fillColor: fillLight.color.getHex(),
+          fillIntensity: fillLight.intensity,
+          fillPosition: fillLight.position.toArray(),
+          rimColor: rimLight.color.getHex(),
+          rimIntensity: rimLight.intensity,
+          rimPosition: rimLight.position.toArray(),
+          spotColor: poolSpot.color.getHex(),
+          spotIntensity: poolSpot.intensity,
+          spotPosition: poolSpot.position.toArray(),
+          environmentIntensity: scene.environmentIntensity,
+          exposure: renderer.toneMappingExposure,
+          cameraFov: camera.fov,
+          cameraPosition: camera.position.toArray(),
+          cameraTarget: controls.target.toArray(),
+        }),
+        setWideCamera: () => {
+          controls.autoRotate = false;
+          btnAutoCamEl.classList.remove('is-on');
+          btnAutoCamEl.setAttribute('aria-pressed', 'false');
+          btnAutoCamEl.textContent = '自動カメラ OFF';
+          camera.position.set(...STYLE.cameraPosition);
+          controls.target.set(...STYLE.cameraTarget);
+          controls.update();
+          renderer.render(scene, camera);
+          return {
+            cameraPos: camera.position.toArray(),
+            targetPos: controls.target.toArray(),
+          };
+        },
+        checkFishClearance: () => {
+          const rockBoxes = rockGroup.children.map((m) => {
+            m.updateMatrixWorld(true);
+            return { name: m.name, box: new THREE.Box3().setFromObject(m) };
+          });
+          const propBoxes = propsResult.props.map((m) => {
+            m.updateMatrixWorld(true);
+            return { name: m.name, box: new THREE.Box3().setFromObject(m) };
+          });
+          const obstacles = [...rockBoxes, ...propBoxes];
+          const hits = [];
+          const checkPoint = (label, p) => {
+            for (const ob of obstacles) {
+              if (ob.box.containsPoint(p)) {
+                hits.push({ fish: label, obstacle: ob.name, pos: p.toArray() });
+              }
+            }
+          };
+          for (let i = 0; i < schoolAgents.length; i++) {
+            checkPoint(`katakuchi-${i}`, schoolAgents[i].actor.object.position);
+          }
+          for (let i = 0; i < otherFishAgents.length; i++) {
+            checkPoint(`${otherFishAgents[i].species}-${i}`, otherFishAgents[i].actor.object.position);
+          }
+          for (let i = 0; i < squidAgents.length; i++) {
+            squidAgents[i].actor.getCenter(_centerTmp);
+            checkPoint(`squid-${i}`, _centerTmp);
+          }
+          return { hitCount: hits.length, hits };
+        },
+      },
+    };
+    Object.defineProperty(myaq.v5, 'detail', {
+      enumerable: false,
+      value: () => {
+        const phases = new Set();
+        let allSardine = schoolAgents.length > 0;
+        let maxRotError = 0;
+        let nanVertices = 0;
+        let forwardDotMin = Infinity;
+        const _snout = new THREE.Vector3();
+        const _tail = new THREE.Vector3();
+        const _dir = new THREE.Vector3();
+        const _fwdCheck = new THREE.Vector3();
+
+        for (const agent of schoolAgents) {
+          const info = agent.actor.sardineInfo ? agent.actor.sardineInfo() : null;
+          if (!info || info.modelName !== 'sardine') {
+            allSardine = false;
+            continue;
+          }
+          phases.add(info.phase.toFixed(4));
+          maxRotError = Math.max(maxRotError, Math.abs(info.rotY + Math.PI / 2));
+
+          agent.actor.object.updateMatrixWorld(true);
+          const sardineObj = agent.actor.object.children[0]?.children[0];
+          const bodyMesh = sardineObj?.getObjectByName('body');
+          const posAttr = bodyMesh?.geometry?.getAttribute('position');
+          if (posAttr) {
+            const arr = posAttr.array;
+            for (let k = 0; k < arr.length; k++) {
+              if (!Number.isFinite(arr[k])) nanVertices++;
+            }
+            const frontIdx = posAttr.count - 2;
+            const backIdx = posAttr.count - 1;
+            _snout.fromBufferAttribute(posAttr, frontIdx).applyMatrix4(bodyMesh.matrixWorld);
+            _tail.fromBufferAttribute(posAttr, backIdx).applyMatrix4(bodyMesh.matrixWorld);
+            _dir.subVectors(_snout, _tail).normalize();
+            _fwdCheck.set(0, 0, 1).applyEuler(agent.actor.object.rotation).normalize();
+            const dot = _dir.dot(_fwdCheck);
+            if (dot < forwardDotMin) forwardDotMin = dot;
+          }
+        }
+        return {
+          schoolModel: myaq.v5.schoolModel,
+          count: schoolAgents.length,
+          allSardine,
+          uniquePhaseCount: phases.size,
+          maxRotError,
+          nanVertices,
+          forwardDotMin: Number.isFinite(forwardDotMin) ? forwardDotMin : 0,
+        };
+      },
+    });
+    Object.defineProperty(myaq.v4, 'detail', {
+      enumerable: false,
+      value: () => {
+        let minPairDist = Infinity;
+        for (let i = 0; i < schoolAgents.length; i++) {
+          const pi = schoolAgents[i].actor.object.position;
+          for (let j = i + 1; j < schoolAgents.length; j++) {
+            const d = pi.distanceTo(schoolAgents[j].actor.object.position);
+            if (d < minPairDist) minPairDist = d;
+          }
+        }
+        return {
+          headingYaw: schoolState.headingYaw,
+          schoolPos: schoolState.pos.toArray(),
+          schoolSpeed: schoolState.vel.length(),
+          minPairDist: schoolAgents.length >= 2 ? minPairDist : 0,
+          radius: [STYLE.schoolRadiusX, STYLE.schoolRadiusY, STYLE.schoolRadiusZ],
+          cohesion: STYLE.schoolCohesion,
+          wobbleAmp: STYLE.schoolWobbleAmp,
+        };
+      },
+    });
+    Object.defineProperty(myaq.v4, 'focusSchool', {
+      enumerable: false,
+      value: (dist = 1.95) => {
+        const [cx, cy, cz] = getSchoolCentroid();
+        const a1 = schoolState.headingYaw + 1.15;
+        const a2 = schoolState.headingYaw - 1.15;
+        const viewAngle = Math.cos(a1) >= Math.cos(a2) ? a1 : a2;
+        controls.autoRotate = false;
+        btnAutoCamEl.classList.remove('is-on');
+        btnAutoCamEl.setAttribute('aria-pressed', 'false');
+        btnAutoCamEl.textContent = '自動カメラ OFF';
+        controls.target.set(cx, cy, cz);
+        camera.position.set(
+          clamp(cx + Math.sin(viewAngle) * dist, -HALF_X + 0.65, HALF_X - 0.65),
+          clamp(cy - 0.14, 0.92, WATER_Y - 0.35),
+          clamp(cz + Math.cos(viewAngle) * dist, -HALF_Z + 0.65, HALF_Z - 0.15)
+        );
+        controls.update();
+        renderer.render(scene, camera);
+        return {
+          centroid: [cx, cy, cz],
+          cameraPos: camera.position.toArray(),
+          targetPos: controls.target.toArray(),
+        };
+      },
+    });
+    Object.defineProperty(myaq.v3, 'detail', {
+      enumerable: false,
+      value: () => ({
+        fogColor: scene.fog.color.getHex(),
+        fogDensity: scene.fog.density,
+        exposure: renderer.toneMappingExposure,
+        hemiIntensity: hemiLight.intensity,
+        hemiSkyColor: hemiLight.color.getHex(),
+        hemiGroundColor: hemiLight.groundColor.getHex(),
+        sunIntensity: sunLight.intensity,
+        sunColor: sunLight.color.getHex(),
+        sunPosition: sunLight.position.toArray(),
+        rimIntensity: rimLight.intensity,
+        rimColor: rimLight.color.getHex(),
+        spotIntensity: poolSpot.intensity,
+        rayBaseOpacity: STYLE.rayBaseOpacity,
+        rayOpacityMin: STYLE.rayOpacityMin,
+        rayOpacityMax: STYLE.rayOpacityMax,
+        rayWidthScale: STYLE.rayWidthScale,
+        causticsSandGain: STYLE.causticsSandGain,
+        backdropFog: backdrop.material.fog,
+        backdropPosition: backdrop.mesh.position.toArray(),
+        backdropSize: [STYLE.backdropWidth, STYLE.backdropHeight],
+        surfaceGlowY: surfaceGlow.mesh.position.y,
+        surfaceGlowSide: surfaceGlow.material.side,
+        surfaceGlowBlending: surfaceGlow.material.blending,
+      }),
+    });
+    window.__MYAQ = myaq;
+
+    // ===== 群れ・遊泳制御 =====
+    const schoolState = {
+      pos: new THREE.Vector3(-0.1, STYLE.schoolGoalCenterY, -0.15),
+      goal: new THREE.Vector3(1.25, STYLE.schoolGoalCenterY + 0.04, -0.35),
+      vel: new THREE.Vector3(),
+      timer: 10,
+      headingYaw: Math.atan2(1.25, -0.35),
+    };
+
+    function pickSchoolGoal(currentPos) {
+      const next = new THREE.Vector3();
+      for (let tries = 0; tries < 8; tries++) {
+        next.set(
+          (Math.random() * 2 - 1) * STYLE.schoolGoalRangeX,
+          STYLE.schoolGoalCenterY + (Math.random() * 2 - 1) * STYLE.schoolGoalRangeY,
+          (Math.random() * 2 - 1) * STYLE.schoolGoalRangeZ
+        );
+        if (next.distanceTo(currentPos) >= 1.1) break;
+      }
+      return next;
+    }
+
+    function halton(index, base) {
+      let result = 0;
+      let f = 1 / base;
+      let i = index + 1;
+      while (i > 0) {
+        result += f * (i % base);
+        i = Math.floor(i / base);
+        f /= base;
+      }
+      return result;
+    }
+
+    // 部品：群れ楕円体スロット基底の生成（流用要件：パラメータ外出し・関数分離）
+    function buildSchoolSlotSeeds(maxCount = SCHOOL_MAX, options = {}) {
+      const rx = options.radiusX ?? STYLE.schoolRadiusX;
+      const ry = options.radiusY ?? STYLE.schoolRadiusY;
+      const rz = options.radiusZ ?? STYLE.schoolRadiusZ;
+      const densityPow = options.densityPow ?? STYLE.schoolDensityPow;
+      const minSlotGap = options.minSlotGap ?? STYLE.schoolMinSlotGap;
+
+      const seeds = [];
+      for (let i = 0; i < maxCount; i++) {
+        const r = Math.pow(halton(i, 3), densityPow);
+        const uCos = halton(i, 2) * 2 - 1;
+        const uPhi = halton(i, 5) * Math.PI * 2;
+        const sinTheta = Math.sqrt(Math.max(0, 1 - uCos * uCos));
+        seeds.push(new THREE.Vector3(
+          r * sinTheta * Math.cos(uPhi) * rx,
+          r * uCos * ry,
+          r * sinTheta * Math.sin(uPhi) * rz
+        ));
+      }
+
+      for (let iter = 0; iter < 14; iter++) {
+        for (let i = 0; i < maxCount; i++) {
+          for (let j = i + 1; j < maxCount; j++) {
+            const dx = seeds[j].x - seeds[i].x;
+            const dy = seeds[j].y - seeds[i].y;
+            const dz = seeds[j].z - seeds[i].z;
+            const d2 = dx * dx + dy * dy + dz * dz;
+            if (d2 < minSlotGap * minSlotGap) {
+              const d = Math.max(1e-4, Math.sqrt(d2));
+              const push = (minSlotGap - d) * 0.52;
+              const w1 = i < 12 ? 0.25 : 0.45;
+              const w2 = 1.0 - w1;
+              seeds[i].x -= (dx / d) * push * w1;
+              seeds[i].y -= (dy / d) * push * w1;
+              seeds[i].z -= (dz / d) * push * w1;
+              seeds[j].x += (dx / d) * push * w2;
+              seeds[j].y += (dy / d) * push * w2;
+              seeds[j].z += (dz / d) * push * w2;
+            }
+          }
+          const s = seeds[i];
+          const ellip = Math.hypot(s.x / rx, s.y / ry, s.z / rz);
+          if (ellip > 1.0) s.divideScalar(ellip);
+        }
+      }
+      return seeds;
+    }
+
+    let cachedSlotSeedsKey = '';
+    let cachedSlotSeeds = [];
+    function getSchoolSlotSeeds(options = {}) {
+      const rx = options.radiusX ?? STYLE.schoolRadiusX;
+      const ry = options.radiusY ?? STYLE.schoolRadiusY;
+      const rz = options.radiusZ ?? STYLE.schoolRadiusZ;
+      const densityPow = options.densityPow ?? STYLE.schoolDensityPow;
+      const minSlotGap = options.minSlotGap ?? STYLE.schoolMinSlotGap;
+      const maxCount = options.maxCount ?? SCHOOL_MAX;
+      const key = `${maxCount}:${rx}:${ry}:${rz}:${densityPow}:${minSlotGap}`;
+      if (key !== cachedSlotSeedsKey) {
+        cachedSlotSeeds = buildSchoolSlotSeeds(maxCount, options);
+        cachedSlotSeedsKey = key;
+      }
+      return cachedSlotSeeds;
+    }
+
+    // 部品：群れ各個体の楕円体オフセット計算（進行方向回転＋穏やかなトルネード渦循環＋個体数スケーリング）
+    function schoolSlotOffset(slotIndex, t, out, options = {}) {
+      const rx = options.radiusX ?? STYLE.schoolRadiusX;
+      const ry = options.radiusY ?? STYLE.schoolRadiusY;
+      const rz = options.radiusZ ?? STYLE.schoolRadiusZ;
+      const seeds = options.seeds ?? getSchoolSlotSeeds(options);
+      const count = options.count ?? Math.max(schoolAgents.length, 1);
+      const baseCount = options.baseCount ?? STYLE.schoolBaseCount;
+      const scaleExp = options.scaleExp ?? STYLE.schoolScaleExp;
+      const wobbleAmp = options.wobbleAmp ?? STYLE.schoolWobbleAmp;
+      const wobbleFreq = options.wobbleFreq ?? STYLE.schoolWobbleFreq;
+      const swirlRate = options.swirlRate ?? STYLE.schoolSwirlRate;
+      const wobblePhase = options.wobblePhase ?? (halton(slotIndex, 7) * Math.PI * 2);
+      const headingYaw = options.headingYaw ?? schoolState.headingYaw;
+
+      const scale = Math.pow(Math.max(1, count) / baseCount, scaleExp);
+      const s = seeds[slotIndex % seeds.length];
+
+      // 楕円体正規化空間で緩やかに螺旋回転させ、ベイトボール／トルネードのうねりを出す（楕円体境界は維持）
+      const nx = s.x / rx;
+      const ny = s.y / ry;
+      const nz = s.z / rz;
+      const swirlAngle = t * swirlRate + ny * 0.55;
+      const swCos = Math.cos(swirlAngle);
+      const swSin = Math.sin(swirlAngle);
+      const rxSw = (nx * swCos - nz * swSin) * rx;
+      const rzSw = (nx * swSin + nz * swCos) * rz;
+
+      const wbT = t * wobbleFreq + wobblePhase;
+      const lx = rxSw * scale + Math.sin(wbT * 1.1) * wobbleAmp;
+      const ly = s.y * scale + Math.sin(wbT * 0.85 + 1.3) * wobbleAmp * 0.65;
+      const lz = rzSw * scale + Math.cos(wbT * 0.95 + 2.1) * wobbleAmp * 0.75;
+
+      const hSin = Math.sin(headingYaw);
+      const hCos = Math.cos(headingYaw);
+      return out.set(
+        lx * hSin + lz * hCos,
+        ly,
+        lx * hCos - lz * hSin
+      );
+    }
+
+    // 部品：群れの進行方向更新
+    function computeSchoolHeadingYaw(state, dt, options = {}) {
+      const turnRate = options.turnRate ?? MAX_TURN_RATE;
+      const speedXZ = Math.hypot(state.vel.x, state.vel.z);
+      if (speedXZ > 0.02) {
+        const targetHeading = Math.atan2(state.vel.x, state.vel.z);
+        const hDiff = wrapAngle(targetHeading - state.headingYaw);
+        const maxStep = turnRate * 0.72 * dt;
+        const gain = Math.min(1, dt * 4 * smoothstep(speedXZ, 0.02, 0.14));
+        state.headingYaw = wrapAngle(state.headingYaw + clamp(hDiff * gain, -maxStep, maxStep));
+      }
+      return state.headingYaw;
+    }
+
+    const _schoolSlotWorld = new THREE.Vector3();
+    const _schoolSep = new THREE.Vector3();
+    const _schoolToSlot = new THREE.Vector3();
+
+    // 部品：群れ個体の凝集＋近距離分離＋目標速度算出
+    function computeSchoolSteer(agent, agents, state, t, outGoal, options = {}) {
+      const cohesion = options.cohesion ?? STYLE.schoolCohesion;
+      const speedGain = options.speedGain ?? STYLE.schoolSpeedGain;
+      const alignLead = options.alignLead ?? STYLE.schoolAlignLead;
+      const minForwardBias = options.minForwardBias ?? STYLE.schoolMinForwardBias;
+      const sepDist = options.separationDist ?? STYLE.schoolSeparationDist;
+      const sepMinDist = options.separationMinDist ?? STYLE.schoolSeparationMinDist;
+      const sepWeight = options.separationWeight ?? STYLE.schoolSeparationWeight;
+      const sepSpeedGain = options.separationSpeedGain ?? STYLE.schoolSeparationSpeedGain;
+      const minSpeed = options.minSpeed ?? STYLE.schoolMinSpeed;
+      const maxSpeed = options.maxSpeed ?? STYLE.schoolMaxSpeed;
+
+      schoolSlotOffset(agent.slotIndex, t, _schoolSlotWorld, {
+        ...options,
+        count: agents.length,
+        headingYaw: state.headingYaw,
+        wobblePhase: agent.wobblePhase,
+      }).add(state.pos);
+
+      const pos = agent.actor.object.position;
+      _schoolSep.set(0, 0, 0);
+      const sepDist2 = sepDist * sepDist;
+      for (const other of agents) {
+        if (other === agent) continue;
+        const op = other.actor.object.position;
+        const dx = pos.x - op.x;
+        const dy = pos.y - op.y;
+        const dz = pos.z - op.z;
+        const d2 = dx * dx + dy * dy + dz * dz;
+        if (d2 > 1e-8 && d2 < sepDist2) {
+          const d = Math.sqrt(d2);
+          const t1 = (sepDist - d) / sepDist;
+          const t2 = Math.max(0, (sepMinDist - d) / sepMinDist);
+          const push = t1 + 2.2 * t2;
+          _schoolSep.x += (dx / d) * push;
+          _schoolSep.y += (dy / d) * push;
+          _schoolSep.z += (dz / d) * push;
+        }
+      }
+
+      _schoolSlotWorld.addScaledVector(_schoolSep, sepWeight);
+      _schoolToSlot.subVectors(_schoolSlotWorld, pos);
+
+      const hSin = Math.sin(state.headingYaw);
+      const hCos = Math.cos(state.headingYaw);
+      outGoal.set(
+        hSin * alignLead + _schoolToSlot.x * cohesion,
+        0,
+        hCos * alignLead + _schoolToSlot.z * cohesion
+      );
+      const fwdComp = outGoal.x * hSin + outGoal.z * hCos;
+      if (fwdComp < minForwardBias) {
+        const boost = minForwardBias - fwdComp;
+        outGoal.x += hSin * boost;
+        outGoal.z += hCos * boost;
+      }
+      outGoal.x += pos.x;
+      outGoal.y = _schoolSlotWorld.y + _schoolToSlot.y * 0.45;
+      outGoal.z += pos.z;
+
+      const schoolSpeed = state.vel.length();
+      const sepFwd = _schoolSep.x * hSin + _schoolSep.z * hCos;
+      const aheadAlongHeading = _schoolToSlot.x * hSin + _schoolToSlot.z * hCos + sepFwd * sepSpeedGain;
+      return clamp(
+        schoolSpeed + agent.speedOffset + aheadAlongHeading * speedGain,
+        minSpeed,
+        maxSpeed
+      );
+    }
+
+    function pickFishWaypoint(spec) {
+      return new THREE.Vector3(
+        (Math.random() * 2 - 1) * 3.45,
+        spec.zoneCenter + (Math.random() * 2 - 1) * spec.zoneHalf * 0.85,
+        (Math.random() * 2 - 1) * 1.75
+      );
+    }
+
+    const _steerGoal = new THREE.Vector3();
+    const _fwd = new THREE.Vector3();
+    const _slotNow = new THREE.Vector3();
+    const _slotAhead = new THREE.Vector3();
+
+    function stepFishAgent(agent, desiredGoal, desiredSpeed, dt) {
+      const actor = agent.actor;
+      const pos = actor.object.position;
+      const spec = agent.spec;
+      const zoneMin = spec.zoneCenter - spec.zoneHalf;
+      const zoneMax = spec.zoneCenter + spec.zoneHalf;
+
+      // 壁（|x|>4.0, |z|>2.2）や遊泳帯上下限に近づいたら中心方向へ目標方位を寄せる（v5 と不変）
+      const wallX = smoothstep(Math.abs(pos.x), 3.45, 4.02);
+      const wallZ = smoothstep(Math.abs(pos.z), 1.68, 2.22);
+      const wallWeight = Math.max(wallX, wallZ);
+
+      _steerGoal.copy(desiredGoal);
+      if (wallWeight > 0) {
+        _steerGoal.lerp(_centerTmp.set(0, spec.zoneCenter, 0), wallWeight);
+      }
+
+      if (pos.y < zoneMin + 0.14) {
+        const pull = smoothstep(zoneMin + 0.14 - pos.y, 0, 0.22);
+        _steerGoal.y = THREE.MathUtils.lerp(_steerGoal.y, spec.zoneCenter + spec.zoneHalf * 0.35, pull);
+      } else if (pos.y > zoneMax - 0.14) {
+        const pull = smoothstep(pos.y - (zoneMax - 0.14), 0, 0.22);
+        _steerGoal.y = THREE.MathUtils.lerp(_steerGoal.y, spec.zoneCenter - spec.zoneHalf * 0.35, pull);
+      }
+      _steerGoal.y = clamp(_steerGoal.y, zoneMin, zoneMax);
+
+      const dx = _steerGoal.x - pos.x;
+      const dz = _steerGoal.z - pos.z;
+      const targetYaw = Math.atan2(dx, dz);
+      const diff = wrapAngle(targetYaw - agent.yaw);
+      const wantTurn = clamp(diff * 1.85, -MAX_TURN_RATE, MAX_TURN_RATE);
+      agent.turnRate += (wantTurn - agent.turnRate) * Math.min(1, dt * 6);
+      agent.turnRate = clamp(agent.turnRate, -MAX_TURN_RATE, MAX_TURN_RATE);
+
+      const dy = _steerGoal.y - pos.y;
+      const wantVy = clamp(dy * 0.85, -0.22, 0.22);
+      const wantPitch = clamp(-Math.atan2(wantVy, Math.max(actor.currentSpeed, 0.2)), -0.24, 0.24);
+      agent.pitch += (wantPitch - agent.pitch) * Math.min(1, dt * 4);
+
+      actor.drive = { speed: desiredSpeed, turnRate: agent.turnRate };
+      actor.update(dt);
+
+      agent.yaw = wrapAngle(agent.yaw + agent.turnRate * dt);
+      actor.object.rotation.set(agent.pitch, agent.yaw, 0, 'YXZ');
+      _fwd.set(0, 0, 1).applyEuler(actor.object.rotation);
+      pos.addScaledVector(_fwd, actor.currentSpeed * dt);
+
+      pos.x = clamp(pos.x, -HALF_X + 0.08, HALF_X - 0.08);
+      pos.z = clamp(pos.z, -HALF_Z + 0.08, HALF_Z - 0.08);
+      pos.y = clamp(pos.y, 0.12, WATER_Y - 0.12);
+    }
+
+    // 部品：群れ専用オリジナルモデル（sardine.js）のアダプタ（sardine.js 本体は未変更）
+    function createSardineActor(options = {}) {
+      const length = options.length ?? 0.12;
+      const phase = options.phase ?? 0;
+      const sardine = createSardine({
+        length,
+        phase,
+        metalness: options.metalness ?? STYLE.sardineMetalness,
+        roughness: options.roughness ?? STYLE.sardineRoughness,
+      });
+
+      const object = new THREE.Group();
+      object.name = 'sardine-actor';
+
+      const bankGroup = new THREE.Group();
+      bankGroup.name = 'sardine-bank';
+      sardine.object.rotation.y = -Math.PI / 2;
+      bankGroup.add(sardine.object);
+      object.add(bankGroup);
+
+      const swimParams = sardine.object.userData?.sardineSpec?.swimParams ?? {
+        baseFreqHz: 1.6,
+        freqPerSpeed: 2.6,
+      };
+      const nominalSpeed = options.nominalSpeed ?? FISH_SPECS.katakuchi.speed;
+
+      let speed = options.initialSpeed ?? 0.18;
+      let turn = 0;
+      let roll = 0;
+      let swimCycles = 0;
+
+      sardine.update(0, 1.0);
+
+      const actor = {
+        object,
+        drive: null,
+        get currentSpeed() {
+          return speed;
+        },
+        setMotion() {},
+        update(dt) {
+          const wantSpeed = actor.drive ? Math.max(0, actor.drive.speed) : nominalSpeed;
+          const wantTurn = actor.drive ? actor.drive.turnRate : 0;
+
+          speed += (wantSpeed - speed) * Math.min(1, dt * 2.2);
+          turn += (wantTurn - turn) * Math.min(1, dt * 5.0);
+          const targetRoll = clamp(-turn * 0.28, -0.45, 0.45);
+          roll += (targetRoll - roll) * Math.min(1, dt * 4.0);
+          bankGroup.rotation.z = roll;
+
+          const swimIntensity = clamp(speed / Math.max(nominalSpeed, 0.1), 0.30, 1.85);
+          const freqHz = swimParams.baseFreqHz + swimParams.freqPerSpeed * swimIntensity;
+          swimCycles += dt * freqHz;
+          const effTime = freqHz > 1e-6 ? swimCycles / freqHz : 0;
+          sardine.update(effTime, swimIntensity);
+        },
+        dispose() {
+          object.removeFromParent();
+          object.traverse((o) => {
+            if (o.isMesh) {
+              if (o.geometry) o.geometry.dispose();
+              if (o.material) {
+                if (Array.isArray(o.material)) o.material.forEach((m) => m.dispose());
+                else o.material.dispose();
+              }
+            }
+          });
+        },
+      };
+      Object.defineProperty(actor, 'sardineInfo', {
+        enumerable: false,
+        value: () => ({
+          length,
+          phase,
+          swimIntensity: clamp(speed / Math.max(nominalSpeed, 0.1), 0.30, 1.85),
+          swimCycles,
+          modelName: sardine.object.name,
+          rotY: sardine.object.rotation.y,
+        }),
+      });
+      return actor;
+    }
+
+    function createSchoolFish(slotIndex, simTime, targetCount = INITIAL_SCHOOL_COUNT) {
+      const spec = FISH_SPECS.katakuchi;
+      const swimPhase = ((slotIndex * 0.61803398875) % 1) * Math.PI * 2;
+      const length = 0.114 + halton(slotIndex, 17) * 0.012;
+      const actor = createSardineActor({
+        length,
+        phase: swimPhase,
+        nominalSpeed: spec.speed,
+      });
+      actor.setMotion('swim');
+
+      const wobblePhase = halton(slotIndex, 7) * Math.PI * 2;
+      schoolSlotOffset(slotIndex, simTime, _slotNow, {
+        count: targetCount,
+        headingYaw: schoolState.headingYaw,
+        wobblePhase,
+      }).add(schoolState.pos);
+      actor.object.position.set(
+        clamp(_slotNow.x, -HALF_X + 0.2, HALF_X - 0.2),
+        clamp(_slotNow.y, spec.zoneCenter - spec.zoneHalf + 0.05, spec.zoneCenter + spec.zoneHalf - 0.05),
+        clamp(_slotNow.z, -HALF_Z + 0.2, HALF_Z - 0.2)
+      );
+
+      const yaw = wrapAngle(schoolState.headingYaw + (Math.random() - 0.5) * 0.16);
+      actor.object.rotation.set(0, yaw, 0, 'YXZ');
+      scene.add(actor.object);
+
+      return {
+        species: 'katakuchi',
+        spec,
+        actor,
+        slotIndex,
+        yaw,
+        pitch: 0,
+        turnRate: 0,
+        wobblePhase,
+        speedOffset: (Math.random() - 0.5) * 0.015,
+      };
+    }
+
+    function setSchoolCount(targetCount, simTime) {
+      const clamped = clamp(Math.round(targetCount / SCHOOL_STEP) * SCHOOL_STEP, SCHOOL_MIN, SCHOOL_MAX);
+      while (schoolAgents.length < clamped) {
+        const agent = createSchoolFish(schoolAgents.length, simTime, clamped);
+        schoolAgents.push(agent);
+      }
+      while (schoolAgents.length > clamped) {
+        const removed = schoolAgents.pop();
+        removed.actor.dispose();
+      }
+      updateHudUI();
+    }
+
+    function updateHudUI() {
+      const c = computeCounts();
+      residentTotalEl.textContent = String(c.total);
+      schoolLabelEl.textContent = `群れ ${c.katakuchi}`;
+      btnDecEl.disabled = c.katakuchi <= SCHOOL_MIN;
+      btnIncEl.disabled = c.katakuchi >= SCHOOL_MAX;
+    }
+
+    // ===== メイン初期化 & ループ =====
+    let simTime = 0;
+
+    btnDecEl.addEventListener('click', () => {
+      if (!myaq.ready) return;
+      setSchoolCount(schoolAgents.length - SCHOOL_STEP, simTime);
+    });
+
+    btnIncEl.addEventListener('click', () => {
+      if (!myaq.ready) return;
+      setSchoolCount(schoolAgents.length + SCHOOL_STEP, simTime);
+    });
+
+    btnAutoCamEl.addEventListener('click', () => {
+      controls.autoRotate = !controls.autoRotate;
+      btnAutoCamEl.classList.toggle('is-on', controls.autoRotate);
+      btnAutoCamEl.setAttribute('aria-pressed', String(controls.autoRotate));
+      btnAutoCamEl.textContent = controls.autoRotate ? '自動カメラ ON' : '自動カメラ OFF';
+    });
+
+    async function initAquarium() {
+      try {
+        await Promise.all([
+          loadFish('./vendor/fish-kit/fish/', ['aji', 'madai', 'kurodai', 'buri']),
+          loadSquids('./vendor/squid-kit/', ['aori']),
+        ]);
+
+        // カタクチイワシ 42 匹の群れ
+        setSchoolCount(INITIAL_SCHOOL_COUNT, 0);
+
+        // その他 4 種の魚（アジ 5, マダイ 2, クロダイ 2, ブリ 2）— 行動ロジック不変
+        for (const species of ['aji', 'madai', 'kurodai', 'buri']) {
+          const spec = FISH_SPECS[species];
+          for (let i = 0; i < spec.count; i++) {
+            const actor = createFish(species, spec.lengthCm);
+            actor.setMotion('swim');
+            const startPos = pickFishWaypoint(spec);
+            const yaw = Math.random() * Math.PI * 2 - Math.PI;
+            actor.object.position.copy(startPos);
+            actor.object.rotation.set(0, yaw, 0, 'YXZ');
+            scene.add(actor.object);
+            otherFishAgents.push({
+              species,
+              spec,
+              actor,
+              yaw,
+              pitch: 0,
+              turnRate: 0,
+              waypoint: pickFishWaypoint(spec),
+              waypointTimer: 4 + Math.random() * 5,
+              speedBias: (Math.random() - 0.5) * 0.04,
+            });
+          }
+        }
+
+        // アオリイカ 2 匹（home = (±1.6, 1.0, ∓0.6), floorY = 0）— 行動ロジック不変
+        const squidConfigs = [
+          { home: new THREE.Vector3( 1.6, 1.0, -0.6), initialDelay: 16.5, colorPhase: 0.4 },
+          { home: new THREE.Vector3(-1.6, 1.0,  0.6), initialDelay: 24.0, colorPhase: 3.1 },
+        ];
+        for (const cfg of squidConfigs) {
+          const actor = createSquid('aori', { home: cfg.home, floorY: 0 });
+          actor.setMotion('hover');
+          const origBrainUpdate = actor.brain.update.bind(actor.brain);
+          actor.brain.update = (stepDt) => {
+            origBrainUpdate(stepDt);
+            const cT = simTime + cfg.colorPhase;
+            const tg = actor.squid.target;
+            tg.dark = 0.33 + 0.14 * Math.sin(cT * 0.32) + 0.05 * Math.sin(cT * 0.17 + 1.1);
+            tg.cloud = Math.max(0, Math.sin(cT * 0.24 + 0.7) - 0.35) * 0.45;
+            tg.pale = Math.max(0, Math.sin(cT * 0.19 + 2.2) - 0.58) * 0.42;
+          };
+          scene.add(actor.object);
+          squidAgents.push({
+            actor,
+            timer: cfg.initialDelay,
+            isForward: false,
+          });
+        }
+
+        updateHudUI();
+        statusOverlayEl.classList.add('hidden');
+        myaq.ready = true;
+      } catch (err) {
+        myaq.ready = false;
+        const msg = err && err.message ? err.message : String(err);
+        console.error('Aquarium load failed:', err);
+        statusBoxEl.classList.add('error');
+        statusBoxEl.textContent = `読み込みに失敗しました: ${msg}`;
+      }
+    }
+
+    initAquarium();
+
+    const clock = new THREE.Clock();
+    const _desiredVel = new THREE.Vector3();
+    const _schoolDiff = new THREE.Vector3();
+
+    function stepSimulation(dt) {
+      simTime += dt;
+
+      // 1) 群れ目標点の滑らかな移動（光柱の下をゆっくり回遊）
+      schoolState.timer -= dt;
+      _schoolDiff.subVectors(schoolState.goal, schoolState.pos);
+      const distToGoal = _schoolDiff.length();
+      if (schoolState.timer <= 0 || distToGoal < 0.25) {
+        schoolState.goal = pickSchoolGoal(schoolState.pos);
+        schoolState.timer = 8 + Math.random() * 7;
+        _schoolDiff.subVectors(schoolState.goal, schoolState.pos);
+      }
+      const goalDist = _schoolDiff.length();
+      if (goalDist > 1e-4) {
+        const cruise = Math.min(0.24, goalDist * 0.35);
+        _desiredVel.copy(_schoolDiff).multiplyScalar(cruise / goalDist);
+      } else {
+        _desiredVel.set(0, 0, 0);
+      }
+      schoolState.vel.lerp(_desiredVel, 1 - Math.exp(-1.4 * dt));
+      schoolState.pos.addScaledVector(schoolState.vel, dt);
+      schoolState.pos.x = clamp(schoolState.pos.x, -STYLE.schoolGoalRangeX - 0.2, STYLE.schoolGoalRangeX + 0.2);
+      schoolState.pos.y = clamp(schoolState.pos.y, 1.28, 1.74);
+      schoolState.pos.z = clamp(schoolState.pos.z, -STYLE.schoolGoalRangeZ - 0.2, STYLE.schoolGoalRangeZ + 0.2);
+
+      // 2) カタクチイワシ群れの更新（ベイトボール／トルネード隊形＋凝集・分離）
+      computeSchoolHeadingYaw(schoolState, dt);
+      for (const agent of schoolAgents) {
+        const speed = computeSchoolSteer(agent, schoolAgents, schoolState, simTime, _slotAhead);
+        stepFishAgent(agent, _slotAhead, speed, dt);
+      }
+
+      // 3) その他 4 種の魚を更新（v5 と同一ロジック）
+      for (const agent of otherFishAgents) {
+        agent.waypointTimer -= dt;
+        if (agent.waypointTimer <= 0 || agent.actor.object.position.distanceTo(agent.waypoint) < 0.75) {
+          agent.waypoint = pickFishWaypoint(agent.spec);
+          agent.waypointTimer = 4.5 + Math.random() * 5.5;
+        }
+        const speed = Math.max(0.15, agent.spec.speed + agent.speedBias);
+        stepFishAgent(agent, agent.waypoint, speed, dt);
+      }
+
+      // 4) アオリイカ 2 匹を更新（v5 と同一ロジック）
+      for (const s of squidAgents) {
+        s.timer -= dt;
+        if (s.timer <= 0) {
+          if (!s.isForward) {
+            s.isForward = true;
+            s.actor.setMotion('forward');
+            s.timer = 4.0 + Math.random() * 2.0;
+          } else {
+            s.isForward = false;
+            s.actor.setMotion('hover');
+            s.timer = 15.0 + Math.random() * 15.0;
+          }
+        }
+        s.actor.update(dt);
+      }
+    }
+
+    renderer.setAnimationLoop(() => {
+      const rawDt = Math.min(clock.getDelta(), 0.25);
+
+      if (myaq.ready) {
+        let rem = rawDt;
+        while (rem > 1e-6) {
+          const stepDt = Math.min(rem, 0.05);
+          stepSimulation(stepDt);
+          rem -= stepDt;
+        }
+      } else {
+        simTime += rawDt;
+      }
+
+      backdrop.update(simTime);
+      surfaceGlow.update(simTime);
+      water.update(simTime);
+      marineSnow.update(rawDt, simTime);
+      lightRays.update(simTime);
+      sandResult.updateCaustics(simTime);
+      rockResult.updateCaustics(simTime);
+      propsResult.updateCaustics(simTime);
+      seaweedResult.update(simTime);
+
+      controls.target.x = clamp(controls.target.x, -4.0, 4.0);
+      controls.target.y = clamp(controls.target.y, 0.25, 2.35);
+      controls.target.z = clamp(controls.target.z, -2.3, 2.3);
+      controls.update();
+      if (camera.position.y < 0.15) camera.position.y = 0.15;
+
+      renderer.render(scene, camera);
+    });
+  </script>
+</body>
+</html>
