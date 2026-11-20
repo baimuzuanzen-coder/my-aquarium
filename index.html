@@ -471,7 +471,7 @@
       schoolWobbleAmp: 0.034,
       schoolWobbleFreq: 0.62,
       schoolSwirlRate: 0.28,
-      schoolMinSpeed: 0.07,
+      schoolMinSpeed: 0.025,     // v9：0.07 → 0.025（calm の中心はこれより遅く、0.07 だと群れ全体がスロットより前へ出続けた）
       schoolMaxSpeed: 0.55,
       schoolGoalRangeX: tl(1.80),
       schoolGoalCenterY: tl(1.48),
@@ -480,6 +480,79 @@
       schoolGoalRangeZ: 0.30,   // v7：隊形（半径 0.54 など）は魚に比例して縮めないので、奥行きの回遊幅は ×倍率（0.43）よりさらに絞り、手前の岩・奥の崖から離す
       sardineMetalness: 0.82,
       sardineRoughness: 0.15,
+
+      // 群れの緩急と反応（v9）：大洗「IWASHI LIFE」の観察（work/oarai-analysis-muse.md）から
+      // 緩急：calm（ゆっくり漂う雲）⇔ flow（速くそろった流れ）を 10〜20 秒かけて行き来する
+      schoolCalmSpeed: 0.06,           // calm の群れ中心の速さ（m/s）
+      schoolFlowSpeed: 0.42,           // flow の群れ中心の速さ（m/s）
+      schoolFlowMinLap: 9.0,           // flow で 1 周にかける最短の秒数（周回が短い小さな水槽では速さを自動で下げる）
+      schoolTempoFirstHold: [10, 14],  // 起動直後の calm の秒数（範囲から選ぶ）
+      schoolTempoCalmHold: [14, 22],   // calm を保つ秒数
+      schoolTempoFlowHold: [14, 22],   // flow を保つ秒数
+      schoolTempoRamp: [10, 18],       // calm ⇔ flow の切り替えにかける秒数
+      schoolSpeedEase: 0.8,            // 中心の速さが目標の速さへ寄る速さ（1/s。小さいほどじわじわ）
+      schoolCalmArrive: 0.35,          // calm で目標点のこの距離（m）から減速する
+      schoolCalmTurnRate: 0.25,        // 群れの向きが変わる速さの上限（rad/s）：calm
+      schoolFlowTurnRate: 1.10,        //   flow
+      schoolBurstTurnRate: 0.90,       //   驚いた直後
+      schoolRoamFit: 0.85,             // calm の中心の範囲：隊形のこの割合までを個体の自由域に収める（1 未満は壁際で少し押しつぶれてよい）
+      schoolFlowLoopFit: 0.95,         // flow の周回の大きさ（自由域から隊形の横幅を引いた大きさに対する割合）
+      schoolFlowLookAhead: 0.9,        // flow の周回で先回りして狙う角度（rad）
+      schoolFlowBob: 0.06,             // flow で上下にうねる幅（m）
+      // 密度は一定にしない：calm はゆるく、flow と大きな魚の近くでは締まる
+      schoolFlowForwardScale: 0.92,    // flow で隊形の前後の長さにかける倍率
+      schoolFlowLateralScale: 0.72,    // flow で隊形の横幅にかける倍率
+      schoolFlowVerticalScale: 0.86,   // flow で隊形の高さにかける倍率
+      schoolFlowWobbleScale: 0.45,     // flow で個体ごとの揺らぎにかける倍率（全体の統一）
+      schoolFlowSwirlScale: 0.25,      // flow で隊形の中の渦の回転にかける倍率
+      schoolFlowAlignScale: 1.35,      // flow で進行方向へそろえる強さにかける倍率
+      schoolCalmAlignScale: 0.5,       // calm で進行方向へそろえる強さにかける倍率（雲：向きがゆるくばらける）
+      schoolCalmForwardBiasScale: 0.3, // calm で「前向きを保つ下限」（schoolMinForwardBias）にかける倍率
+      schoolBendMaxAngle: 1.0,         // 方向転換で隊形を弓なりに曲げる角度の上限（隊形の先端で rad）
+      schoolBendEase: 1.0,             // 曲がり具合が実際の旋回に追いつく速さ（1/s）
+      schoolBendMinSpeed: 0.25,        // 曲がり具合＝旋回の速さ ÷ 進む速さ。進む速さはこれ以上として計算（ゆっくり向きを変えるときに曲げすぎない）
+      schoolBendSpeedRange: [0.12, 0.30],   // 曲げを効かせ始める・効かせ切る中心の速さ（m/s。calm でその場で向きを変えるときは曲げない）
+      // 大きな魚への局所反応：近くの個体だけが押し出され、群れがへこみ・分かれて、通過後に閉じる
+      // radius＝体の中心線（鼻先〜尾）から押し出す半径、lead＝進む先へ伸ばす秒数、sense＝群れ全体が締まり始める距離、weight＝強さ
+      schoolThreats: {
+        buri:    { radius: 0.40, lead: 0.45, sense: 1.6, weight: 1.0 },
+        madai:   { radius: 0.27, lead: 0.35, sense: 1.0, weight: 0.6 },
+        kurodai: { radius: 0.25, lead: 0.35, sense: 1.0, weight: 0.6 },
+      },
+      schoolDentMaxShift: 0.20,        // 押し出しでスロットをずらす量の上限（m）
+      schoolDentEnvelope: 0.95,        // 押し出した点を収める群れの外形（隊形の楕円体に対する割合）
+      schoolThreatCompress: 0.24,      // 大きな魚が近い間、群れ全体を締める割合
+      schoolThreatEase: 1.5,           // 締まり具合の追従の速さ（1/s）
+      schoolThreatDart: 0.25,          // 押し出された個体の速さの上乗せ（m/s）
+      schoolBigFishHardMin: 0.18,      // イワシの中心と大きな魚の体の中心線の最小距離（m、最終段で保証）
+      schoolBigFishHardGap: 0.02,      // 大きな魚の体高の半分＋このすき間の方が大きければ、そちらを最小距離にする
+      // 驚き反応：ブリの急接近で群れ全体が一瞬だけ速くなり（バースト）、約 10 秒かけて戻る
+      schoolStartle: { buri: { dist: 1.3, closing: 0.30 } },   // 群れ中心からの距離（m）と、近づく速さ（m/s）の条件
+      schoolStartleCooldown: 25,       // 次の驚きまでの最短の秒数（慣れ）
+      schoolBurstSpeed: 0.55,          // バースト中の中心の速さ（m/s）
+      schoolBurstFlowMul: 1.4,         // flow 中はその速さのこの倍率の方が大きければそちら
+      schoolBurstRise: 0.30,           // バーストの立ち上がり（秒）
+      schoolBurstHold: 0.9,            // バーストを保つ秒数
+      schoolBurstFall: 0.6,            // バーストが収まる秒数
+      schoolFleeRecover: 10,           // 驚き（fleeLevel）が 0 へ戻るまでの秒数
+      schoolFleeTailSpeed: 0.04,       // 驚きが残っている間の速さの上乗せ（m/s、fleeLevel に比例）
+      schoolFleeCompress: 0.10,        // 驚きが残っている間、群れ全体を締める割合
+      // 個体の追随（離れ魚の回収）
+      schoolFishTurnRate: 2.0,         // イワシ 1 匹の旋回の速さの上限（rad/s。他の魚は MAX_TURN_RATE のまま）
+      schoolFishMaxPitch: 0.45,        // イワシ 1 匹の上下の傾きの上限（rad）
+      schoolLeashStart: 0.25,          // スロットからこの距離（m）を超えると引力を強め始める
+      schoolLeashFull: 0.70,           // この距離で引力が最大
+      schoolLeashGain: 2.2,            // 引力の最大の倍率
+      schoolCatchUpSpeed: 0.85,        // 追いつくとき・flow・驚いたときの個体の最高速（m/s）
+      schoolOffHeadingSpeedMin: 0.30,  // 向きが目標と大きくずれている間の速さの倍率（減速して小回りで戻る）
+      schoolFishAccel: 2.2,            // 個体の速さの追従（1/s）
+      schoolFishBurstAccel: 7.0,       // 驚いたときの個体の速さの追従（1/s）
+      schoolSwimIntensityMin: 0.18,    // 尾の振りの強さ（速さ ÷ 巡航速度）の下限
+      schoolSwimIntensityMax: 2.4,     //   上限
+      // はみ出しゼロの保証（v9、最終段）：体の先端・尾・背腹がガラス・水面・砂から出ないよう位置を戻す
+      tankGuardGap: 0.01,              // ガラスと水面からのすき間（m）
+      tankGuardFloorY: 0.04,           // 体の下端の最低の高さ（m、砂の起伏 ±0.035 の上）
+      squidGuardMargin: 0.12,          // イカが前進中に水槽の端へこの距離（m）まで近づいたら、その場でとどまる動きへ戻す
 
       // 魚の巡回（v7）：範囲と壁の寄せは水槽に比例。ただし体長の半分＋すき間は必ずガラスから離し、
       // 旋回半径（速さ ÷ 最大旋回速度）が大きい魚ほど壁の手前で早めに曲がり始める
@@ -3428,7 +3501,67 @@ uniform float uGlassReflectRoughness;`)
           };
         },
       },
+      v9: {
+        // 緩急の寄り具合（0 = calm、1 = flow）
+        tempo: () => schoolState.tempo,
+        // 群れ中心（schoolState.pos）が実際に動いた速さ（m/s）
+        schoolSpeed: () => schoolState.speedActual,
+        // 驚き・逃避の強さ（0..1。バースト中 1、その後 STYLE.schoolFleeRecover 秒で 0）
+        fleeLevel: () => schoolState.flee,
+        // 群れ中心から最も近いブリ／マダイ／クロダイの中心までの距離（m）。いなければ null
+        nearestBigFish: () => {
+          let best = Infinity;
+          for (const f of otherFishAgents) {
+            if (f.species !== 'buri' && f.species !== 'madai' && f.species !== 'kurodai') continue;
+            best = Math.min(best, f.actor.object.position.distanceTo(schoolState.pos));
+          }
+          return Number.isFinite(best) ? best : null;
+        },
+      },
     };
+    // v9 の内訳（検証用。列挙しない）：進み方・目標の速さ・驚きの回数・締まり・曲がり具合・中心の範囲・周回、
+    // イワシと大きな魚の体の中心線の最小距離（今の瞬間）
+    Object.defineProperty(myaq.v9, 'detail', {
+      enumerable: false,
+      value: () => {
+        const q = new THREE.Vector3();
+        const fwd = new THREE.Vector3();
+        const a = new THREE.Vector3();
+        const b = new THREE.Vector3();
+        let minClear = Infinity;
+        for (const f of otherFishAgents) {
+          if (!STYLE.schoolThreats[f.species]) continue;
+          const o = f.actor.object;
+          fwd.set(0, 0, 1).applyEuler(o.rotation);
+          a.copy(o.position).addScaledVector(fwd, -f.limits.half);
+          b.copy(o.position).addScaledVector(fwd, f.limits.half);
+          for (const s of schoolAgents) {
+            closestPointOnSegment(a, b, s.actor.object.position, q);
+            minClear = Math.min(minClear, q.distanceTo(s.actor.object.position));
+          }
+        }
+        return {
+          guide: schoolState.guide,
+          tempoRaw: schoolState.tempoRaw,
+          tempoTarget: schoolState.tempoTarget,
+          tempoHold: schoolState.tempoHold,
+          speed: schoolState.speed,
+          speedTarget: schoolState.speedTarget,
+          burstEnv: schoolState.burstEnv,
+          startleCount: schoolState.startleCount,
+          startleCooldown: schoolState.startleCooldown,
+          threatNear: schoolState.threatNear,
+          bendCurv: schoolState.bendCurv,
+          shape: { ...schoolState.shape },
+          range: { ...schoolState.range },
+          loop: { ...schoolState.loop, cx: schoolState.loopCx, dir: schoolState.loopDir },
+          flowSpeed: schoolState.flowSpeed,
+          free: { ...SCHOOL_FREE },
+          minBigFishClearance: Number.isFinite(minClear) ? minClear : null,
+          squidGuardStops: squidAgents.map((s) => s.guardStops || 0),
+        };
+      },
+    });
     Object.defineProperty(myaq.v5, 'detail', {
       enumerable: false,
       value: () => {
@@ -3563,20 +3696,65 @@ uniform float uGlassReflectRoughness;`)
     const schoolState = {
       pos: new THREE.Vector3(tl(-0.1), STYLE.schoolGoalCenterY, tl(-0.15)),
       goal: new THREE.Vector3(tl(1.25), STYLE.schoolGoalCenterY + tl(0.04), tl(-0.35)),
-      vel: new THREE.Vector3(),
+      vel: new THREE.Vector3(),       // v9：群れ中心の実際の速度（位置の変化 ÷ 時間）
       timer: 10,
       headingYaw: Math.atan2(1.25, -0.35),
+      // v9：緩急（tempo 0 = calm、1 = flow）
+      tempoRaw: 0,                    // 直線的に動く内部値
+      tempo: 0,                       // なめらかにした値（フック tempo() が返す）
+      tempoTarget: 0,
+      tempoHold: 12,                  // 今の状態を保つ残り秒数
+      tempoRate: 1 / 14,              // 切り替えの速さ（1/秒）
+      guide: 'calm',                  // 中心の進み方：'calm'（目標点を巡る）／'flow'（周回）
+      loopDir: 1,                     // flow の周回の向き（+1/-1）
+      loopCx: 0,                      // flow の周回の中心のずれ（x）
+      speedTarget: 0,
+      speed: 0,                       // 中心の進む速さ（向きに沿って）
+      speedActual: 0,                 // 実際に動いた速さ（範囲の端で止められた分を含む。フック schoolSpeed()）
+      yawRate: 0,                     // 向きの変わる速さ（rad/s）
+      bendCurv: 0,                    // 隊形を弓なりに曲げる曲がり具合（1/m）
+      swirlPhase: 0,                  // 隊形の中の渦の角度（速さを変えても飛ばないよう積分する）
+      // v9：大きな魚・驚き
+      threatNear: 0,                  // 大きな魚の近さ（0..1、群れ全体の締まり）
+      flee: 0,                        // 驚き（0..1、フック fleeLevel()）
+      burstT: -1,                     // バースト開始からの秒数（-1 = なし）
+      burstYaw: 0,                    // バーストで向かう向き
+      startleCooldown: 0,
+      startleCount: 0,
+      burstEnv: 0,                    // バーストの強さ（0..1）
+      threats: [],                    // 大きな魚の体の棒（senseSchoolThreats が毎ステップ更新）
+      threatCount: 0,
+      // 隊形の形（updateSchoolShape が毎ステップ更新）：前後・上下・横の倍率、個体の揺らぎ、匹数による大きさ
+      shape: { scaleF: 1, scaleV: 1, scaleL: 1, wobbleAmp: STYLE.schoolWobbleAmp, countScale: 1 },
+      range: { x: 1, z: 1 },          // 群れ中心が動いてよい範囲（schoolCenterRange の結果）
+      loop: { x: 0.6, z: 0.4 },       // flow の周回の半径
+      flowSpeed: STYLE.schoolFlowSpeed,
     };
+    schoolState.tempoHold = randRange(STYLE.schoolTempoFirstHold);
 
-    function pickSchoolGoal(currentPos, out = new THREE.Vector3()) {
+    function randRange(r) {
+      return r[0] + Math.random() * (r[1] - r[0]);
+    }
+
+    // v9：イワシ 1 匹ぶんの自由域（ガラス際で曲がり始める手前）。いちばん長い個体（0.126m）で見積もる
+    const SCHOOL_FREE = (() => {
+      const L = computePatrolLimits(0.126, FISH_SPECS.katakuchi.speed, STYLE.schoolFishTurnRate);
+      return { x: L.startX, z: L.startZ };
+    })();
+
+    // v9：range（{ x, z }）で範囲を渡せる（既定は従来の STYLE.schoolGoalRangeX/Z）
+    function pickSchoolGoal(currentPos, out = new THREE.Vector3(), range = null) {
       const next = out;   // v7：既存のベクトルに書き込む（新しく作らない）
+      const rx = range ? range.x : STYLE.schoolGoalRangeX;
+      const rz = range ? range.z : STYLE.schoolGoalRangeZ;
+      const minMove = range ? Math.min(tl(1.1), Math.hypot(rx, rz) * 0.8) : tl(1.1);
       for (let tries = 0; tries < 8; tries++) {
         next.set(
-          (Math.random() * 2 - 1) * STYLE.schoolGoalRangeX,
+          (Math.random() * 2 - 1) * rx,
           STYLE.schoolGoalCenterY + (Math.random() * 2 - 1) * STYLE.schoolGoalRangeY,
-          (Math.random() * 2 - 1) * STYLE.schoolGoalRangeZ
+          (Math.random() * 2 - 1) * rz
         );
-        if (next.distanceTo(currentPos) >= tl(1.1)) break;
+        if (next.distanceTo(currentPos) >= minMove) break;
       }
       return next;
     }
@@ -3681,6 +3859,12 @@ uniform float uGlassReflectRoughness;`)
       const swirlRate = options.swirlRate ?? STYLE.schoolSwirlRate;
       const wobblePhase = options.wobblePhase ?? (halton(slotIndex, 7) * Math.PI * 2);
       const headingYaw = options.headingYaw ?? schoolState.headingYaw;
+      // v9：渦の角度（積分した値を渡せる）、締まり（前後・上下・横の倍率）、弓なりの曲がり具合（1/m、+ で右回り側へ曲げる）
+      const swirlPhase = options.swirlPhase ?? t * swirlRate;
+      const scaleF = options.scaleForward ?? 1;
+      const scaleV = options.scaleVertical ?? 1;
+      const scaleL = options.scaleLateral ?? 1;
+      const bend = options.bendCurv ?? 0;
 
       const scale = Math.pow(Math.max(1, count) / baseCount, scaleExp);
       const s = seeds[slotIndex % seeds.length];
@@ -3689,16 +3873,26 @@ uniform float uGlassReflectRoughness;`)
       const nx = s.x / rx;
       const ny = s.y / ry;
       const nz = s.z / rz;
-      const swirlAngle = t * swirlRate + ny * 0.55;
+      const swirlAngle = swirlPhase + ny * 0.55;
       const swCos = Math.cos(swirlAngle);
       const swSin = Math.sin(swirlAngle);
       const rxSw = (nx * swCos - nz * swSin) * rx;
       const rzSw = (nx * swSin + nz * swCos) * rz;
 
       const wbT = t * wobbleFreq + wobblePhase;
-      const lx = rxSw * scale + Math.sin(wbT * 1.1) * wobbleAmp;
-      const ly = s.y * scale + Math.sin(wbT * 0.85 + 1.3) * wobbleAmp * 0.65;
-      const lz = rzSw * scale + Math.cos(wbT * 0.95 + 2.1) * wobbleAmp * 0.75;
+      let lx = rxSw * scale * scaleF + Math.sin(wbT * 1.1) * wobbleAmp;
+      const ly = s.y * scale * scaleV + Math.sin(wbT * 0.85 + 1.3) * wobbleAmp * 0.65;
+      let lz = rzSw * scale * scaleL + Math.cos(wbT * 0.95 + 2.1) * wobbleAmp * 0.75;
+
+      // v9：方向転換のとき、隊形を進む道筋の弧に沿って弓なりに曲げる（先頭は曲がる先へ、後ろは来た道に残る＝塊のうねり）
+      if (Math.abs(bend) > 1e-4) {
+        const phi = bend * lx;
+        const sinP = Math.sin(phi);
+        const cosP = Math.cos(phi);
+        const fwd = sinP / bend - lz * sinP;
+        lz = (1 - cosP) / bend + lz * cosP;
+        lx = fwd;
+      }
 
       const hSin = Math.sin(headingYaw);
       const hCos = Math.cos(headingYaw);
@@ -3723,6 +3917,409 @@ uniform float uGlassReflectRoughness;`)
       return state.headingYaw;
     }
 
+    // ===== v9：群れの緩急と反応（大洗「IWASHI LIFE」の観察 R1〜R6 を部品に分けたもの） =====
+
+    // 部品（v9）：緩急の状態。calm（0）と flow（1）を、保つ時間・切り替えの時間をそれぞれ範囲から選んで行き来する（R1）
+    function updateSchoolTempo(state, dt) {
+      if (state.tempoRaw === state.tempoTarget) {
+        state.tempoHold -= dt;
+        if (state.tempoHold <= 0) {
+          state.tempoTarget = 1 - state.tempoTarget;
+          state.tempoRate = 1 / randRange(STYLE.schoolTempoRamp);
+        }
+      } else {
+        const dir = Math.sign(state.tempoTarget - state.tempoRaw);
+        state.tempoRaw += dir * state.tempoRate * dt;
+        if ((dir > 0 && state.tempoRaw >= state.tempoTarget) || (dir < 0 && state.tempoRaw <= state.tempoTarget)) {
+          state.tempoRaw = state.tempoTarget;
+          state.tempoHold = randRange(state.tempoTarget === 1 ? STYLE.schoolTempoFlowHold : STYLE.schoolTempoCalmHold);
+        }
+      }
+      state.tempo = smoothstep(state.tempoRaw, 0, 1);
+      return state.tempo;
+    }
+
+    // 部品（v9）：隊形の形。flow は横と高さを締め、大きな魚が近い間・驚いている間は全体を締める（R3・R6）。揺らぎは flow と驚きで控えめ（R5）
+    function updateSchoolShape(state, count) {
+      const sh = state.shape;
+      const tE = state.tempo;
+      const squeeze = 1 - STYLE.schoolThreatCompress * state.threatNear - STYLE.schoolFleeCompress * state.flee;
+      sh.scaleF = (1 + (STYLE.schoolFlowForwardScale - 1) * tE) * squeeze;
+      sh.scaleL = (1 + (STYLE.schoolFlowLateralScale - 1) * tE) * squeeze;
+      sh.scaleV = (1 + (STYLE.schoolFlowVerticalScale - 1) * tE) * squeeze;
+      sh.wobbleAmp = STYLE.schoolWobbleAmp * (1 + (STYLE.schoolFlowWobbleScale - 1) * Math.max(tE, state.flee));
+      sh.countScale = Math.pow(Math.max(1, count) / STYLE.schoolBaseCount, STYLE.schoolScaleExp);
+      return sh;
+    }
+
+    // 部品（v9）：schoolSlotOffset へ渡す引数に、今の隊形の形を書き込む
+    function applySchoolShapeOptions(state, opts) {
+      const sh = state.shape;
+      opts.swirlPhase = state.swirlPhase;
+      opts.scaleForward = sh.scaleF;
+      opts.scaleVertical = sh.scaleV;
+      opts.scaleLateral = sh.scaleL;
+      opts.wobbleAmp = sh.wobbleAmp;
+      opts.bendCurv = state.bendCurv;
+      return opts;
+    }
+
+    // 部品（v9）：群れ中心が動いてよい範囲（|x|・|z| の上限）。個体の自由域から、向き yaw のときの隊形の広がり × fit を引く
+    function schoolCenterRange(state, yaw, fit, out) {
+      const sh = state.shape;
+      const a = STYLE.schoolRadiusX * sh.countScale * sh.scaleF;   // 前後（進む向き）
+      const b = STYLE.schoolRadiusZ * sh.countScale * sh.scaleL;   // 横
+      const s = Math.sin(yaw);
+      const c = Math.cos(yaw);
+      out.x = Math.max(0.05, SCHOOL_FREE.x - Math.sqrt(a * a * s * s + b * b * c * c) * fit);
+      out.z = Math.max(0.05, SCHOOL_FREE.z - Math.sqrt(a * a * c * c + b * b * s * s) * fit);
+      return out;
+    }
+
+    // 部品（v9）：大きな魚（STYLE.schoolThreats の種）を毎ステップ見て、①体の棒（局所反応用）、②近さ（群れ全体の締まり）、
+    // ③急接近による驚き（バースト）を更新する。群れ全体は逃げない（R2）
+    const _thFwd = new THREE.Vector3();
+    const _thQ = new THREE.Vector3();
+    const _thRel = new THREE.Vector3();
+    function senseSchoolThreats(state, fishAgents, dt) {
+      let n = 0;
+      let near = 0;
+      for (const f of fishAgents) {
+        const cfg = STYLE.schoolThreats[f.species];
+        if (!cfg) continue;
+        const th = state.threats[n] ?? (state.threats[n] = { a: new THREE.Vector3(), b: new THREE.Vector3(), side: new THREE.Vector3(), radius: 0, dart: 0 });
+        const o = f.actor.object;
+        _thFwd.set(0, 0, 1).applyEuler(o.rotation);
+        const half = f.limits.half;
+        th.a.copy(o.position).addScaledVector(_thFwd, -half);
+        th.b.copy(o.position).addScaledVector(_thFwd, half + f.actor.currentSpeed * cfg.lead);
+        th.side.set(_thFwd.z, 0, -_thFwd.x);
+        if (th.side.lengthSq() < 1e-8) th.side.set(1, 0, 0);
+        th.side.normalize();
+        th.radius = cfg.radius;
+        th.dart = STYLE.schoolThreatDart * cfg.weight;
+        n++;
+
+        // 群れ全体の締まり：群れ中心から体の線分までの距離が sense 以内で効き始め、radius で最大
+        closestPointOnSegment(th.a, th.b, state.pos, _thQ);
+        const dSeg = _thQ.distanceTo(state.pos);
+        near = Math.max(near, cfg.weight * (1 - smoothstep(dSeg, cfg.radius, cfg.sense)));
+
+        // 驚き：群れ中心から dist 以内で、近づく速さが closing 以上（急接近）。慣れのため間をあける（R4）
+        const st = STYLE.schoolStartle[f.species];
+        if (st && state.startleCooldown <= 0) {
+          const dC = o.position.distanceTo(state.pos);
+          if (dC <= st.dist && dC > 1e-4) {
+            _thRel.copy(_thFwd).multiplyScalar(f.actor.currentSpeed).sub(state.vel);
+            const closing = (_thRel.x * (state.pos.x - o.position.x) + _thRel.y * (state.pos.y - o.position.y) + _thRel.z * (state.pos.z - o.position.z)) / dC;
+            if (closing >= st.closing) triggerSchoolBurst(state, o.position);
+          }
+        }
+      }
+      state.threatCount = n;
+      state.threatNear += (near - state.threatNear) * (1 - Math.exp(-STYLE.schoolThreatEase * dt));
+    }
+
+    // 部品（v9）：驚きの開始。向きは今の進行方向から ±1 rad 以内で、「前に空きがある」と「脅威から離れる」が良い向きを選ぶ
+    const _burstRange = { x: 1, z: 1 };
+    function triggerSchoolBurst(state, threatPos) {
+      state.burstT = 0;
+      state.flee = 1;
+      state.startleCooldown = STYLE.schoolStartleCooldown;
+      state.startleCount++;
+      let awayX = state.pos.x - threatPos.x;
+      let awayZ = state.pos.z - threatPos.z;
+      const al = Math.hypot(awayX, awayZ) || 1;
+      awayX /= al;
+      awayZ /= al;
+      let best = state.headingYaw;
+      let bestScore = -Infinity;
+      for (let k = -4; k <= 4; k++) {
+        const yaw = state.headingYaw + k * 0.25;
+        const s = Math.sin(yaw);
+        const c = Math.cos(yaw);
+        schoolCenterRange(state, yaw, 1.0, _burstRange);
+        // その向きに進んで範囲の端に当たるまでの距離（1m で頭打ち）
+        let room = 1;
+        if (Math.abs(s) > 1e-4) room = Math.min(room, ((s > 0 ? _burstRange.x : -_burstRange.x) - state.pos.x) / s);
+        if (Math.abs(c) > 1e-4) room = Math.min(room, ((c > 0 ? _burstRange.z : -_burstRange.z) - state.pos.z) / c);
+        const score = Math.max(0, room) + 0.6 * Math.max(0, s * awayX + c * awayZ) - 0.15 * Math.abs(k * 0.25);
+        if (score > bestScore) { bestScore = score; best = yaw; }
+      }
+      state.burstYaw = wrapAngle(best);
+    }
+
+    // 部品（v9）：flow の周回（楕円）の大きさと速さを決める。周回は自由域から隊形の横幅を引いた内側に収め、
+    // 1 周が STYLE.schoolFlowMinLap 秒より短くなる小さな水槽では速さを下げる
+    function setupSchoolFlowLoop(state) {
+      const sh = state.shape;
+      const b = STYLE.schoolRadiusZ * sh.countScale * STYLE.schoolFlowLateralScale;   // flow の横幅
+      state.loopCx = (Math.random() * 2 - 1) * 0.1;
+      const lx = Math.max(0.08, (SCHOOL_FREE.x - b) * STYLE.schoolFlowLoopFit - Math.abs(state.loopCx));
+      const lz = Math.max(0.08, (SCHOOL_FREE.z - b) * STYLE.schoolFlowLoopFit);
+      state.loop.x = lx;
+      state.loop.z = lz;
+      const perim = Math.PI * (3 * (lx + lz) - Math.sqrt((3 * lx + lz) * (lx + 3 * lz)));
+      state.flowSpeed = Math.min(STYLE.schoolFlowSpeed, perim / STYLE.schoolFlowMinLap);
+      // 今の向きに近い回り方を選ぶ（切り替えで急に向きを変えない）
+      const th = Math.atan2(state.pos.z / lz, (state.pos.x - state.loopCx) / lx);
+      const tx = -Math.sin(th) * lx;   // 角度が増える向きの接線
+      const tz = Math.cos(th) * lz;
+      state.loopDir = (tx * Math.sin(state.headingYaw) + tz * Math.cos(state.headingYaw)) >= 0 ? 1 : -1;
+    }
+
+    // 部品（v9）：群れ中心の更新。向きに沿って進み（横滑りしない）、向きは上限つきで曲がる。
+    // calm は目標点を巡ってゆっくり漂い、flow は楕円の周回を速く回る。驚くと一瞬だけ速くなる（R1・R4・R5）
+    const _ctrPrev = new THREE.Vector3();
+    const _ctrTarget = new THREE.Vector3();
+    const _ctrRange = { x: 1, z: 1 };
+    function updateSchoolCenter(state, dt, count) {
+      updateSchoolTempo(state, dt);
+      updateSchoolShape(state, count);
+      const tE = state.tempo;
+
+      // バーストの強さ：立ち上がり → 保つ → 収まる。驚き（flee）はバースト中 1、その後 schoolFleeRecover 秒で 0 へ
+      let burstEnv = 0;
+      if (state.burstT >= 0) {
+        state.burstT += dt;
+        const r = STYLE.schoolBurstRise;
+        const h = STYLE.schoolBurstHold;
+        const f = STYLE.schoolBurstFall;
+        const bt = state.burstT;
+        if (bt < r) burstEnv = bt / r;
+        else if (bt < r + h) burstEnv = 1;
+        else if (bt < r + h + f) burstEnv = 1 - smoothstep(bt, r + h, r + h + f);
+        else state.burstT = -1;
+      }
+      state.burstEnv = burstEnv;
+      if (state.burstT >= 0) state.flee = 1;
+      else state.flee = Math.max(0, state.flee - dt / STYLE.schoolFleeRecover);
+      state.startleCooldown = Math.max(0, state.startleCooldown - dt);
+
+      // 進み方の切り替え（calm の目標点巡り ⇔ flow の周回）
+      if (state.guide === 'calm' && state.tempoTarget === 1 && state.tempoRaw > 0.15) {
+        state.guide = 'flow';
+        setupSchoolFlowLoop(state);
+      } else if (state.guide === 'flow' && state.tempoTarget === 0 && state.tempoRaw < 0.4) {
+        state.guide = 'calm';
+        state.timer = 0;   // 次の目標点をすぐ選ぶ
+      }
+
+      let baseSpeed;
+      if (state.guide === 'flow') {
+        const lx = state.loop.x;
+        const lz = state.loop.z;
+        const th = Math.atan2(state.pos.z / lz, (state.pos.x - state.loopCx) / lx) + state.loopDir * STYLE.schoolFlowLookAhead;
+        _ctrTarget.set(state.loopCx + Math.cos(th) * lx, STYLE.schoolGoalCenterY + Math.sin(th * 2) * STYLE.schoolFlowBob, Math.sin(th) * lz);
+        baseSpeed = STYLE.schoolCalmSpeed + (state.flowSpeed - STYLE.schoolCalmSpeed) * tE;
+      } else {
+        // calm：目標点は「その向きで進んだときの範囲」の内側に選ぶ（範囲の端で止まって着かない、を防ぐ）
+        state.timer -= dt;
+        const toGoal = state.goal.distanceTo(state.pos);
+        if (state.timer <= 0 || toGoal < tl(0.25)) {
+          _ctrRange.x =Math.max(0.05, SCHOOL_FREE.x - STYLE.schoolRadiusZ * state.shape.countScale * STYLE.schoolRoamFit);
+          _ctrRange.z = Math.max(0.05, SCHOOL_FREE.z - STYLE.schoolRadiusZ * state.shape.countScale * STYLE.schoolRoamFit);
+          // 今の向きから ±100° 以内の目標点を優先する（雲がその場で反転して、先端の個体が大回りしないため）
+          const hs = Math.sin(state.headingYaw);
+          const hc = Math.cos(state.headingYaw);
+          for (let tries = 0; tries < 6; tries++) {
+            pickSchoolGoal(state.pos, state.goal, _ctrRange);
+            const gx = state.goal.x - state.pos.x;
+            const gz = state.goal.z - state.pos.z;
+            if ((gx * hs + gz * hc) / (Math.hypot(gx, gz) || 1) > -0.17) break;
+          }
+          const gy = Math.atan2(state.goal.x - state.pos.x, state.goal.z - state.pos.z);
+          schoolCenterRange(state, gy, STYLE.schoolRoamFit, _ctrRange);
+          state.goal.x = clamp(state.goal.x, -_ctrRange.x, _ctrRange.x);
+          state.goal.z = clamp(state.goal.z, -_ctrRange.z, _ctrRange.z);
+          state.timer = 10 + Math.random() * 8;
+        }
+        _ctrTarget.copy(state.goal);
+        const arrive = 0.4 + 0.6 * smoothstep(state.goal.distanceTo(state.pos), 0.08, STYLE.schoolCalmArrive);
+        baseSpeed = (STYLE.schoolCalmSpeed + (state.flowSpeed - STYLE.schoolCalmSpeed) * tE) * arrive;
+      }
+
+      // 速さ：原則じわじわ。バーストだけは瞬時に上げる
+      const burstPeak = Math.max(STYLE.schoolBurstSpeed, baseSpeed * STYLE.schoolBurstFlowMul);
+      state.speedTarget = baseSpeed + (burstPeak - baseSpeed) * burstEnv + STYLE.schoolFleeTailSpeed * state.flee;
+      const rate = burstEnv > 0 && state.speed < state.speedTarget ? 10 : STYLE.schoolSpeedEase;
+      state.speed += (state.speedTarget - state.speed) * (1 - Math.exp(-rate * dt));
+
+      // 向き：上限つきで曲がる（曲がる速さもなめらかに変える＝隊形の弓なりがなめらか）
+      const targetYaw = state.burstT >= 0
+        ? state.burstYaw
+        : Math.atan2(_ctrTarget.x - state.pos.x, _ctrTarget.z - state.pos.z);
+      const turnMax = state.burstT >= 0
+        ? STYLE.schoolBurstTurnRate
+        : STYLE.schoolCalmTurnRate + (STYLE.schoolFlowTurnRate - STYLE.schoolCalmTurnRate) * tE;
+      const wantRate = clamp(wrapAngle(targetYaw - state.headingYaw) * 2.0, -turnMax, turnMax);
+      state.yawRate += (wantRate - state.yawRate) * Math.min(1, dt * 3);
+      state.headingYaw = wrapAngle(state.headingYaw + state.yawRate * dt);
+
+      // 移動：向きに沿って進む。上下は目標の高さへゆっくり
+      _ctrPrev.copy(state.pos);
+      const vy = clamp((_ctrTarget.y - state.pos.y) * 0.6, -0.08, 0.08);
+      state.pos.x += Math.sin(state.headingYaw) * state.speed * dt;
+      state.pos.z += Math.cos(state.headingYaw) * state.speed * dt;
+      state.pos.y += vy * dt;
+      schoolCenterRange(state, state.headingYaw, state.guide === 'flow' ? 1.0 : STYLE.schoolRoamFit, state.range);
+      state.pos.x = clamp(state.pos.x, -state.range.x, state.range.x);
+      state.pos.z = clamp(state.pos.z, -state.range.z, state.range.z);
+      state.pos.y = clamp(state.pos.y, tl(1.28), tl(1.74));
+      if (dt > 0) state.vel.subVectors(state.pos, _ctrPrev).multiplyScalar(1 / dt);
+      state.speedActual = state.vel.length();
+
+      // 隊形の中の渦（flow では控えめ）と、弓なりの曲げ（曲がる速さ ÷ 進む速さ。先端の曲げ角に上限）
+      state.swirlPhase += STYLE.schoolSwirlRate * (1 + (STYLE.schoolFlowSwirlScale - 1) * Math.max(tE, state.flee)) * dt;
+      const reach = STYLE.schoolRadiusX * state.shape.countScale * state.shape.scaleF;
+      const maxCurv = STYLE.schoolBendMaxAngle / Math.max(reach, 0.05);
+      // 曲げは進んでいるときだけ（calm でその場で向きを変えるときは、雲のまま向きを変える）
+      const bendWeight = smoothstep(state.speed, STYLE.schoolBendSpeedRange[0], STYLE.schoolBendSpeedRange[1]);
+      const curv = clamp(state.yawRate / Math.max(state.speed, STYLE.schoolBendMinSpeed), -maxCurv, maxCurv) * bendWeight;
+      state.bendCurv += (curv - state.bendCurv) * (1 - Math.exp(-STYLE.schoolBendEase * dt));
+      return state;
+    }
+
+    // 部品（v9・最終段）：イワシを大きな魚の体の中心線（鼻先〜尾）から最小距離まで押し出す（体が重ならない保証）
+    // 押し出し先は「すべての大きな魚から最小距離以上」かつ「水槽の内側（後段で押し戻されない範囲）」の候補から選ぶ。
+    // 大きな魚が 2 匹並んでいる間や、ガラス・砂の近くでも、片方から押し出して別の方へ近づけることがないように
+    const _sepSegs = [];
+    const _sepFwd = new THREE.Vector3();
+    const _sepQ = new THREE.Vector3();
+    const _sepC = new THREE.Vector3();
+    const _sepDir = new THREE.Vector3();
+    const _sepBest = new THREE.Vector3();
+    const SEP_CANDIDATES = 9;
+    function separateSchoolFromBigFish(agents, fishAgents) {
+      let n = 0;
+      for (const f of fishAgents) {
+        if (!STYLE.schoolThreats[f.species]) continue;
+        const sg = _sepSegs[n] ?? (_sepSegs[n] = { a: new THREE.Vector3(), b: new THREE.Vector3(), c: new THREE.Vector3(), side: new THREE.Vector3(), minD: 0, reach2: 0 });
+        const o = f.actor.object;
+        const half = f.limits.half;
+        sg.minD = Math.max(STYLE.schoolBigFishHardMin, f.limits.halfH + STYLE.schoolBigFishHardGap);
+        _sepFwd.set(0, 0, 1).applyEuler(o.rotation);
+        sg.a.copy(o.position).addScaledVector(_sepFwd, -half);
+        sg.b.copy(o.position).addScaledVector(_sepFwd, half);
+        sg.c.copy(o.position);
+        sg.side.set(_sepFwd.z, 0, -_sepFwd.x);
+        if (sg.side.lengthSq() < 1e-8) sg.side.set(1, 0, 0);
+        sg.side.normalize();
+        sg.reach2 = (half + sg.minD) * (half + sg.minD);
+        n++;
+      }
+      // 点 p が全部の大きな魚から離れている度合い（最小距離との差の最小値。0 以上なら合格）と、いちばん食い込んでいる魚
+      const clearance = (p) => {
+        let worst = Infinity;
+        let worstK = -1;
+        for (let k = 0; k < n; k++) {
+          const sg = _sepSegs[k];
+          if (p.distanceToSquared(sg.c) > sg.reach2) continue;
+          const m = closestPointOnSegment(sg.a, sg.b, p, _sepQ).distanceTo(p) - sg.minD;
+          if (m < worst) { worst = m; worstK = k; }
+        }
+        return { worst, worstK };
+      };
+      for (const s of agents) {
+        const p = s.actor.object.position;
+        let cl = clearance(p);
+        if (cl.worst >= 0) continue;
+        const lim = s.limits;
+        const inBounds = (q) => Math.abs(q.x) <= lim.limX - 0.02 && Math.abs(q.z) <= lim.limZ - 0.02 && q.y >= lim.minY + 0.03 && q.y <= lim.maxY - 0.03;
+        for (let pass = 0; pass < 3 && cl.worst < 0; pass++) {
+          const sg = _sepSegs[cl.worstK];
+          closestPointOnSegment(sg.a, sg.b, p, _sepQ);
+          const qx = _sepQ.x, qy = _sepQ.y, qz = _sepQ.z;
+          _sepDir.set(p.x - qx, p.y - qy, p.z - qz);
+          if (_sepDir.lengthSq() < 1e-10) _sepDir.copy(sg.side);
+          _sepDir.normalize();
+          let bestScore = -Infinity;
+          // 候補：まっすぐ外へ／x を除く／z を除く／上／下／横（左右）／斜め上下
+          for (let k = 0; k < SEP_CANDIDATES; k++) {
+            const dx = _sepDir.x, dy = _sepDir.y, dz = _sepDir.z;
+            if (k === 0) _sepC.set(dx, dy, dz);
+            else if (k === 1) _sepC.set(0, dy, dz);
+            else if (k === 2) _sepC.set(dx, dy, 0);
+            else if (k === 3) _sepC.set(0, 1, 0);
+            else if (k === 4) _sepC.set(0, -1, 0);
+            else if (k === 5) _sepC.copy(sg.side);
+            else if (k === 6) _sepC.copy(sg.side).negate();
+            else if (k === 7) _sepC.set(dx, Math.abs(dy) + 0.8, dz);
+            else _sepC.set(dx, -Math.abs(dy) - 0.8, dz);
+            if (_sepC.lengthSq() < 1e-8) continue;
+            _sepC.normalize().multiplyScalar(sg.minD + 0.002);
+            _sepC.x += qx; _sepC.y += qy; _sepC.z += qz;
+            const c = clearance(_sepC);
+            // 合格（全部の魚から離れていて水槽の内側）の候補は移動の少ない順、なければ食い込みの少ない候補
+            const ok = c.worst >= -1e-4 && inBounds(_sepC);
+            const score = ok ? 10 - _sepC.distanceTo(p) : Math.min(c.worst, 0) - (inBounds(_sepC) ? 0 : 1);
+            if (score > bestScore) { bestScore = score; _sepBest.copy(_sepC); }
+          }
+          p.copy(_sepBest);
+          cl = clearance(p);
+        }
+      }
+    }
+
+    // 部品（v9・最終段）：魚 1 匹の体の外接箱（v7 の検証フック bodyExtents と同じ形：鼻先・尾・左右に体長×0.08・上下に体高の半分）
+    const _guardFwd = new THREE.Vector3();
+    const _guardBox = new THREE.Box3();
+    const _guardTmp = new THREE.Vector3();
+    function computeFishBodyBox(agent, out) {
+      const obj = agent.actor.object;
+      const lim = agent.limits;
+      _guardFwd.set(0, 0, 1).applyEuler(obj.rotation);
+      const p = obj.position;
+      const side = lim.bodyLength * 0.08;
+      out.makeEmpty();
+      out.expandByPoint(_guardTmp.copy(p).addScaledVector(_guardFwd, lim.half));
+      out.expandByPoint(_guardTmp.copy(p).addScaledVector(_guardFwd, -lim.half));
+      out.min.x -= side; out.max.x += side;
+      out.min.z -= side; out.max.z += side;
+      out.min.y -= lim.halfH; out.max.y += lim.halfH;
+      return out;
+    }
+
+    // 部品（v9・最終段）：体の外接箱がガラス・水面・砂からはみ出していたら、はみ出した分だけ位置を戻す（全種の魚）
+    function keepFishBodyInTank(agent) {
+      const box = computeFishBodyBox(agent, _guardBox);
+      const p = agent.actor.object.position;
+      const g = STYLE.tankGuardGap;
+      if (box.min.x < -HALF_X + g) p.x += (-HALF_X + g) - box.min.x;
+      else if (box.max.x > HALF_X - g) p.x -= box.max.x - (HALF_X - g);
+      if (box.min.z < -HALF_Z + g) p.z += (-HALF_Z + g) - box.min.z;
+      else if (box.max.z > HALF_Z - g) p.z -= box.max.z - (HALF_Z - g);
+      if (box.max.y > WATER_Y - g) p.y -= box.max.y - (WATER_Y - g);
+      else if (box.min.y < STYLE.tankGuardFloorY) p.y += STYLE.tankGuardFloorY - box.min.y;
+    }
+
+    // 部品（v9・最終段）：イカ。squid-kit の約束で squid.object は動かせないので、前進中に見えている体の外接箱が
+    // 水槽の端へ squidGuardMargin まで近づいたら、その場でとどまる動き（hover：home へ戻る）に切り替える
+    const _squidBox = new THREE.Box3();
+    const _squidPart = new THREE.Box3();
+    // （頂点はキット側で毎フレーム動くので外接箱は毎回計算し直す。重いので呼ぶ側で数ステップに 1 回に間引く）
+    function guardSquidRange(s) {
+      if (!s.isForward) return false;
+      _squidBox.makeEmpty();
+      s.actor.object.updateMatrixWorld(true);
+      s.actor.object.traverseVisible((o) => {
+        if (!o.isMesh || !o.geometry) return;
+        o.geometry.computeBoundingBox();
+        _squidPart.copy(o.geometry.boundingBox).applyMatrix4(o.matrixWorld);
+        _squidBox.union(_squidPart);
+      });
+      const m = STYLE.squidGuardMargin;
+      const near = _squidBox.min.x < -HALF_X + m || _squidBox.max.x > HALF_X - m ||
+        _squidBox.min.z < -HALF_Z + m || _squidBox.max.z > HALF_Z - m || _squidBox.max.y > WATER_Y - m;
+      if (near) {
+        s.isForward = false;
+        s.actor.setMotion('hover');
+        s.timer = 15.0 + Math.random() * 15.0;
+        s.guardStops = (s.guardStops || 0) + 1;
+      }
+      return near;
+    }
+
     const _schoolSlotWorld = new THREE.Vector3();
     const _schoolSep = new THREE.Vector3();
     const _schoolToSlot = new THREE.Vector3();
@@ -3741,11 +4338,14 @@ uniform float uGlassReflectRoughness;`)
       const minSpeed = options.minSpeed ?? STYLE.schoolMinSpeed;
       const maxSpeed = options.maxSpeed ?? STYLE.schoolMaxSpeed;
 
+      const catchUpSpeed = options.catchUpSpeed ?? STYLE.schoolCatchUpSpeed;
+
       // 既定（options なし）では使い回しの引数オブジェクトを渡す。options 指定時だけ従来どおり複製する
       const slotOpts = options === NO_OPTS ? _schoolSlotOpts : { ...options };
       slotOpts.count = agents.length;
       slotOpts.headingYaw = state.headingYaw;
       slotOpts.wobblePhase = agent.wobblePhase;
+      applySchoolShapeOptions(state, slotOpts);   // v9：緩急・締まり・弓なりの曲げ
       schoolSlotOffset(agent.slotIndex, t, _schoolSlotWorld, slotOpts).add(state.pos);
 
       const pos = agent.actor.object.position;
@@ -3770,21 +4370,53 @@ uniform float uGlassReflectRoughness;`)
       }
 
       _schoolSlotWorld.addScaledVector(_schoolSep, sepWeight);
+
+      // v9：大きな魚の近くでは狙う点を体のまわりから押し出す（群れがへこみ・分かれる。通過すれば元のスロットへ戻って閉じる）
+      _schoolSlotBefore.copy(_schoolSlotWorld);
+      const dart = applySchoolThreatDent(_schoolSlotWorld, pos, state.threats, state.threatCount);
+      // 押し出した点は群れの外形（隊形の前後・横・上下の半径で測った楕円体。元のスロットか schoolDentEnvelope の外側の大きい方）
+      // より外へ出さない。へこみは「外へ膨らむ」のではなく「まわりが密になる」形にする（R2・R3）
+      // （押し出されていない点は n1 = n0 なので変わらない）
+      if (_schoolSlotWorld.distanceToSquared(_schoolSlotBefore) > 1e-10) {
+        const n0 = schoolEnvelopeRadius(state, _schoolSlotBefore);
+        const n1 = schoolEnvelopeRadius(state, _schoolSlotWorld);
+        const nMax = Math.max(n0, STYLE.schoolDentEnvelope);
+        if (n1 > nMax) _schoolSlotWorld.sub(state.pos).multiplyScalar(nMax / n1).add(state.pos);
+      }
+      // v9：狙う点は個体の自由域（ガラス際で曲がり始める手前）に収める。届かない点を狙って壁際で大回りしないため
+      const lim = agent.limits;
+      _schoolSlotWorld.x = clamp(_schoolSlotWorld.x, -lim.startX, lim.startX);
+      _schoolSlotWorld.z = clamp(_schoolSlotWorld.z, -lim.startZ, lim.startZ);
+
       _schoolToSlot.subVectors(_schoolSlotWorld, pos);
+      // v9：スロットから離れるほど引力を強め、進行方向へそろえる力を弱める（まず戻ることを優先）
+      const slotDist = _schoolToSlot.length();
+      const leash = smoothstep(slotDist, STYLE.schoolLeashStart, STYLE.schoolLeashFull);
+      const coh = cohesion * (1 + (STYLE.schoolLeashGain - 1) * leash);
+      const tempo = state.tempo;
+      // calm（雲）では進行方向へそろえる力と前向きの下限を弱める：向きがゆるくばらけ、後ろのスロットへも向き直れる
+      const alignScale = STYLE.schoolCalmAlignScale + (STYLE.schoolFlowAlignScale - STYLE.schoolCalmAlignScale) * tempo;
+      const align = alignLead * alignScale * (1 - 0.6 * leash);
 
       const hSin = Math.sin(state.headingYaw);
       const hCos = Math.cos(state.headingYaw);
       outGoal.set(
-        hSin * alignLead + _schoolToSlot.x * cohesion,
+        hSin * align + _schoolToSlot.x * coh,
         0,
-        hCos * alignLead + _schoolToSlot.z * cohesion
+        hCos * align + _schoolToSlot.z * coh
       );
       const fwdComp = outGoal.x * hSin + outGoal.z * hCos;
-      if (fwdComp < minForwardBias) {
-        const boost = minForwardBias - fwdComp;
+      const fwdBias = minForwardBias * (STYLE.schoolCalmForwardBiasScale + (1 - STYLE.schoolCalmForwardBiasScale) * tempo) * (1 - leash);
+      if (fwdComp < fwdBias) {
+        const boost = fwdBias - fwdComp;
         outGoal.x += hSin * boost;
         outGoal.z += hCos * boost;
       }
+      // v9：自分の向きが狙う方向と大きくずれている間は減速する（全速のまま大回りして群れから離れない）
+      const goalYaw = Math.atan2(outGoal.x, outGoal.z);
+      const facing = smoothstep(Math.cos(goalYaw - agent.yaw), 0.3, 0.95);
+      const offHeadingMul = STYLE.schoolOffHeadingSpeedMin + (1 - STYLE.schoolOffHeadingSpeedMin) * facing;
+
       outGoal.x += pos.x;
       outGoal.y = _schoolSlotWorld.y + _schoolToSlot.y * 0.45;
       outGoal.z += pos.z;
@@ -3792,21 +4424,78 @@ uniform float uGlassReflectRoughness;`)
       const schoolSpeed = state.vel.length();
       const sepFwd = _schoolSep.x * hSin + _schoolSep.z * hCos;
       const aheadAlongHeading = _schoolToSlot.x * hSin + _schoolToSlot.z * hCos + sepFwd * sepSpeedGain;
-      return clamp(
-        schoolSpeed + agent.speedOffset + aheadAlongHeading * speedGain,
-        minSpeed,
-        maxSpeed
-      );
+      // 離れているときは「進行方向に沿った遅れ」ではなく「スロットまでの距離」で追いつく
+      const ahead = aheadAlongHeading + (slotDist - aheadAlongHeading) * leash;
+      const speed = schoolSpeed + agent.speedOffset * (1 - 0.6 * tempo) + ahead * speedGain + dart;
+      // 最高速は flow・追いつき・驚きのときに上げる。速さの追従も驚き・追いつきのときは速い
+      const urgency = Math.max(tempo, leash, state.flee);
+      agent.accel = (state.flee > 0.05 || leash > 0.3) ? STYLE.schoolFishBurstAccel : STYLE.schoolFishAccel;
+      // 向きのずれによる減速は上限で頭打ちにした後にかける（大きく遅れていても、向き直るまでは速く泳がない）
+      return Math.max(minSpeed, clamp(speed, minSpeed, maxSpeed + (catchUpSpeed - maxSpeed) * urgency) * offHeadingMul);
+    }
+
+    // 部品（v9）：点 p が群れの外形（隊形の前後・横・上下の半径の楕円体、弓なりの曲げは含めない）の何倍の位置にあるか
+    const _schoolSlotBefore = new THREE.Vector3();
+    function schoolEnvelopeRadius(state, p) {
+      const sh = state.shape;
+      const a = STYLE.schoolRadiusX * sh.countScale * sh.scaleF;
+      const b = STYLE.schoolRadiusZ * sh.countScale * sh.scaleL;
+      const v = STYLE.schoolRadiusY * sh.countScale * sh.scaleV;
+      const hs = Math.sin(state.headingYaw);
+      const hc = Math.cos(state.headingYaw);
+      const dx = p.x - state.pos.x;
+      const dz = p.z - state.pos.z;
+      const f = dx * hs + dz * hc;
+      const l = dx * hc - dz * hs;
+      return Math.hypot(f / a, l / b, (p.y - state.pos.y) / v);
+    }
+
+    // 部品（v9）：線分 a-b 上で点 p に最も近い点を out に入れる
+    function closestPointOnSegment(a, b, p, out) {
+      const abx = b.x - a.x, aby = b.y - a.y, abz = b.z - a.z;
+      const L2 = abx * abx + aby * aby + abz * abz;
+      let u = 0;
+      if (L2 > 1e-12) u = clamp(((p.x - a.x) * abx + (p.y - a.y) * aby + (p.z - a.z) * abz) / L2, 0, 1);
+      return out.set(a.x + abx * u, a.y + aby * u, a.z + abz * u);
+    }
+
+    // 部品（v9）：大きな魚の体（鼻先〜尾の線分を進む先へ少し伸ばした棒）のまわりから、イワシの狙う点を押し出す。
+    // 狙う点（スロット）が棒の中にあれば、棒の外へ向けて上限 STYLE.schoolDentMaxShift までずらす（へこみ。近くほど密になる）。
+    // ずらす量に上限があるので、群れを大きく崩さず、大きな魚が通り過ぎればすぐ閉じる。体どうしが重ならないことは最終段
+    // （separateSchoolFromBigFish）が保証する。threats は senseSchoolThreats が毎ステップ作る { a, b, side, radius, dart }。
+    // 戻り値は棒の中にいる個体の速さの上乗せ（m/s、さっと身をかわす）
+    const _dentQ = new THREE.Vector3();
+    const _dentSide = new THREE.Vector3();
+    const _dentShift = new THREE.Vector3();
+    function applySchoolThreatDent(target, fishPos, threats, count) {
+      let dart = 0;
+      _dentShift.set(0, 0, 0);
+      for (let i = 0; i < count; i++) {
+        const th = threats[i];
+        const sd = closestPointOnSegment(th.a, th.b, fishPos, _dentQ).distanceTo(fishPos);
+        if (sd < th.radius) dart = Math.max(dart, th.dart * (1 - sd / th.radius));
+        closestPointOnSegment(th.a, th.b, target, _dentQ);
+        _dentSide.subVectors(target, _dentQ);
+        const td = _dentSide.length();
+        if (td >= th.radius) continue;
+        if (td > 1e-4) _dentShift.addScaledVector(_dentSide, (th.radius - td) / td);
+        else _dentShift.addScaledVector(th.side, th.radius);
+      }
+      const len = _dentShift.length();
+      if (len > STYLE.schoolDentMaxShift) _dentShift.multiplyScalar(STYLE.schoolDentMaxShift / len);
+      target.add(_dentShift);
+      return dart;
     }
 
     // 部品：魚 1 匹ぶんの巡回の限界（v7）。体長の半分＋すき間を必ずガラスから離し（はみ出し 0）、
     // 旋回半径（速さ ÷ 最大旋回速度）が大きい魚ほど壁の手前で早めに中央へ曲がり始める
-    function computePatrolLimits(bodyLength, turnSpeed) {
+    // v9：turnRate（旋回の速さの上限）を魚ごとに渡せる（イワシは STYLE.schoolFishTurnRate）
+    function computePatrolLimits(bodyLength, turnSpeed, turnRate = MAX_TURN_RATE) {
       const half = bodyLength * 0.5;
       const gap = STYLE.fishGlassGap;
       const limX = HALF_X - gap - half;
       const limZ = HALF_Z - gap - half;
-      const turnR = turnSpeed / MAX_TURN_RATE;
+      const turnR = turnSpeed / turnRate;
       const fullX = Math.min(STYLE.fishWallFullX, limX - turnR * STYLE.fishTurnMargin);
       const fullZ = Math.min(STYLE.fishWallFullZ, limZ - turnR * STYLE.fishTurnMargin);
       const startX = Math.min(STYLE.fishWallStartX, fullX - STYLE.fishWallRamp);
@@ -3874,20 +4563,29 @@ uniform float uGlassReflectRoughness;`)
       const dx = _steerGoal.x - pos.x;
       const dz = _steerGoal.z - pos.z;
       const targetYaw = Math.atan2(dx, dz);
-      const diff = wrapAngle(targetYaw - agent.yaw);
-      const wantTurn = clamp(diff * 1.85, -MAX_TURN_RATE, MAX_TURN_RATE);
+      let diff = wrapAngle(targetYaw - agent.yaw);
+      // v9（イワシのみ）：目標がほぼ真後ろのとき、左右の判定が毎ステップ入れ替わって旋回が打ち消し合い、
+      // 向き直れないまま離れていく（v8 の離れ魚の主因）。今回っている向きを保って回り切る
+      if (agent.turnMax !== undefined && Math.abs(diff) > 2.5 && agent.turnRate * diff < 0) {
+        diff -= Math.sign(diff) * Math.PI * 2;
+      }
+      // v9：旋回・上下の傾きの上限は魚ごと（イワシは小回りが利く。他の魚は従来どおり MAX_TURN_RATE・0.24）
+      const turnMax = agent.turnMax ?? MAX_TURN_RATE;
+      const pitchMax = agent.pitchMax ?? 0.24;
+      const wantTurn = clamp(diff * 1.85, -turnMax, turnMax);
       agent.turnRate += (wantTurn - agent.turnRate) * Math.min(1, dt * 6);
-      agent.turnRate = clamp(agent.turnRate, -MAX_TURN_RATE, MAX_TURN_RATE);
+      agent.turnRate = clamp(agent.turnRate, -turnMax, turnMax);
 
       const dy = _steerGoal.y - pos.y;
       const wantVy = clamp(dy * 0.85, -0.22, 0.22);
-      const wantPitch = clamp(-Math.atan2(wantVy, Math.max(actor.currentSpeed, 0.2)), -0.24, 0.24);
+      const wantPitch = clamp(-Math.atan2(wantVy, Math.max(actor.currentSpeed, 0.2)), -pitchMax, pitchMax);
       agent.pitch += (wantPitch - agent.pitch) * Math.min(1, dt * 4);
 
       // drive は個体ごとに 1 つを使い回す（毎ステップ新しいオブジェクトを作らない。fish-kit は値を読むだけ）
-      if (!agent.drive) agent.drive = { speed: 0, turnRate: 0 };
+      if (!agent.drive) agent.drive = { speed: 0, turnRate: 0, accel: 0 };
       agent.drive.speed = desiredSpeed;
       agent.drive.turnRate = agent.turnRate;
+      agent.drive.accel = agent.accel ?? 0;   // v9：イワシだけが読む（速さの追従の速さ。0 なら既定値）
       actor.drive = agent.drive;
       actor.update(dt);
 
@@ -4100,13 +4798,15 @@ objectNormal = normalize(vec3(objectNormal.x - sdSlope * objectNormal.z, objectN
           const wantSpeed = actor.drive ? Math.max(0, actor.drive.speed) : nominalSpeed;
           const wantTurn = actor.drive ? actor.drive.turnRate : 0;
 
-          speed += (wantSpeed - speed) * Math.min(1, dt * 2.2);
+          // v9：速さの追従は drive.accel（驚いたとき・追いつくときは速い）。尾の振りは実際の速さに合わせ、範囲は STYLE
+          const accel = actor.drive && actor.drive.accel > 0 ? actor.drive.accel : STYLE.schoolFishAccel;
+          speed += (wantSpeed - speed) * Math.min(1, dt * accel);
           turn += (wantTurn - turn) * Math.min(1, dt * 5.0);
           const targetRoll = clamp(-turn * 0.28, -0.45, 0.45);
           roll += (targetRoll - roll) * Math.min(1, dt * 4.0);
           bankGroup.rotation.z = roll;
 
-          const swimIntensity = clamp(speed / Math.max(nominalSpeed, 0.1), 0.30, 1.85);
+          const swimIntensity = clamp(speed / Math.max(nominalSpeed, 0.1), STYLE.schoolSwimIntensityMin, STYLE.schoolSwimIntensityMax);
           const freqHz = swimParams.baseFreqHz + swimParams.freqPerSpeed * swimIntensity;
           swimCycles += dt * freqHz;
           // sardine.update(swimCycles / freqHz, swimIntensity) と同じ位相・振幅（位相は 2π で折り返して精度を保つ）
@@ -4123,7 +4823,7 @@ objectNormal = normalize(vec3(objectNormal.x - sdSlope * objectNormal.z, objectN
         value: () => ({
           length,
           phase,
-          swimIntensity: clamp(speed / Math.max(nominalSpeed, 0.1), 0.30, 1.85),
+          swimIntensity: clamp(speed / Math.max(nominalSpeed, 0.1), STYLE.schoolSwimIntensityMin, STYLE.schoolSwimIntensityMax),
           swimCycles,
           modelName: renderNode.name,
           rotY: renderNode.rotation.y,
@@ -4144,11 +4844,12 @@ objectNormal = normalize(vec3(objectNormal.x - sdSlope * objectNormal.z, objectN
       actor.setMotion('swim');
 
       const wobblePhase = halton(slotIndex, 7) * Math.PI * 2;
-      schoolSlotOffset(slotIndex, simTime, _slotNow, {
+      // v9：今の隊形の形（緩急・締まり・弓なり）のスロットに置く
+      schoolSlotOffset(slotIndex, simTime, _slotNow, applySchoolShapeOptions(schoolState, {
         count: targetCount,
         headingYaw: schoolState.headingYaw,
         wobblePhase,
-      }).add(schoolState.pos);
+      })).add(schoolState.pos);
       actor.object.position.set(
         clamp(_slotNow.x, -HALF_X + tl(0.2), HALF_X - tl(0.2)),
         clamp(_slotNow.y, spec.zoneCenter - spec.zoneHalf + 0.05, spec.zoneCenter + spec.zoneHalf - 0.05),
@@ -4163,12 +4864,15 @@ objectNormal = normalize(vec3(objectNormal.x - sdSlope * objectNormal.z, objectN
         species: 'katakuchi',
         spec,
         actor,
-        // 群れの個体は隊形の目標点を追うので、旋回半径は巡航速度で見積もる
-        limits: computePatrolLimits(length, spec.speed),
+        // 群れの個体は隊形の目標点を追うので、旋回半径は巡航速度で見積もる（v9：イワシは小回りが利く）
+        limits: computePatrolLimits(length, spec.speed, STYLE.schoolFishTurnRate),
         slotIndex,
         yaw,
         pitch: 0,
         turnRate: 0,
+        turnMax: STYLE.schoolFishTurnRate,
+        pitchMax: STYLE.schoolFishMaxPitch,
+        accel: STYLE.schoolFishAccel,
         wobblePhase,
         speedOffset: (Math.random() - 0.5) * 0.015,
       };
@@ -4293,44 +4997,18 @@ objectNormal = normalize(vec3(objectNormal.x - sdSlope * objectNormal.z, objectN
     initAquarium();
 
     const clock = new THREE.Clock();
-    const _desiredVel = new THREE.Vector3();
-    const _schoolDiff = new THREE.Vector3();
+
+    let squidGuardTick = 0;
 
     function stepSimulation(dt) {
       simTime += dt;
 
-      // 1) 群れ目標点の滑らかな移動（光柱の下をゆっくり回遊）
-      schoolState.timer -= dt;
-      _schoolDiff.subVectors(schoolState.goal, schoolState.pos);
-      const distToGoal = _schoolDiff.length();
-      if (schoolState.timer <= 0 || distToGoal < tl(0.25)) {
-        pickSchoolGoal(schoolState.pos, schoolState.goal);
-        schoolState.timer = 10 + Math.random() * 8;
-        _schoolDiff.subVectors(schoolState.goal, schoolState.pos);
-      }
-      const goalDist = _schoolDiff.length();
-      if (goalDist > 1e-4) {
-        const cruise = Math.min(0.24, goalDist * 0.35);
-        _desiredVel.copy(_schoolDiff).multiplyScalar(cruise / goalDist);
-      } else {
-        _desiredVel.set(0, 0, 0);
-      }
-      schoolState.vel.lerp(_desiredVel, 1 - Math.exp(-1.4 * dt));
-      // v7：群れの向きが進む方向にそろうまで、中心の移動を遅くする。
-      // 反転のとき中心だけ先に逆へ動くと、前へ泳ぎ続ける個体と離れて隊形が伸びる（小さな水槽では反転が増えるため）
-      const velXZ = Math.hypot(schoolState.vel.x, schoolState.vel.z);
-      let schoolMoveScale = 1;
-      if (velXZ > 1e-4) {
-        const align = (schoolState.vel.x * Math.sin(schoolState.headingYaw) + schoolState.vel.z * Math.cos(schoolState.headingYaw)) / velXZ;
-        schoolMoveScale = STYLE.schoolTurnMoveMin + (1 - STYLE.schoolTurnMoveMin) * smoothstep(align, 0, 1);
-      }
-      schoolState.pos.addScaledVector(schoolState.vel, dt * schoolMoveScale);
-      schoolState.pos.x = clamp(schoolState.pos.x, -STYLE.schoolGoalRangeX, STYLE.schoolGoalRangeX);
-      schoolState.pos.y = clamp(schoolState.pos.y, tl(1.28), tl(1.74));
-      schoolState.pos.z = clamp(schoolState.pos.z, -STYLE.schoolGoalRangeZ - tl(0.2), STYLE.schoolGoalRangeZ + tl(0.2));
+      // 1) 群れ中心（v9）：大きな魚を感知（局所反応の棒・群れ全体の締まり・急接近の驚き）→ 緩急つきで進む。
+      //    v8 までの「目標点へ速度を寄せる＋反転中は中心を遅くする」は、向きに沿って進む updateSchoolCenter に置き換えた
+      senseSchoolThreats(schoolState, otherFishAgents, dt);
+      updateSchoolCenter(schoolState, dt, schoolAgents.length);
 
       // 2) カタクチイワシ群れの更新（ベイトボール／トルネード隊形＋凝集・分離）
-      computeSchoolHeadingYaw(schoolState, dt);
       for (const agent of schoolAgents) {
         const speed = computeSchoolSteer(agent, schoolAgents, schoolState, simTime, _slotAhead);
         stepFishAgent(agent, _slotAhead, speed, dt);
@@ -4363,6 +5041,14 @@ objectNormal = normalize(vec3(objectNormal.x - sdSlope * objectNormal.z, objectN
         }
         s.actor.update(dt);
       }
+
+      // 5) 最終段（v9）：①大きな魚などの体を水槽の内側へ ②イワシを大きな魚の体から離す ③イワシの体を水槽の内側へ
+      //    （①で大きな魚が動いてから②をする。③はイワシが小さいので②の距離をほとんど崩さない）
+      for (const agent of otherFishAgents) keepFishBodyInTank(agent);
+      separateSchoolFromBigFish(schoolAgents, otherFishAgents);
+      for (const agent of schoolAgents) keepFishBodyInTank(agent);
+      squidGuardTick = (squidGuardTick + 1) % 6;
+      if (squidGuardTick === 0) for (const s of squidAgents) guardSquidRange(s);
     }
 
     renderer.setAnimationLoop(() => {
