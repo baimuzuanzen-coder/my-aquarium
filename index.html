@@ -495,7 +495,7 @@
       schoolCalmTurnRate: 0.25,        // 群れの向きが変わる速さの上限（rad/s）：calm
       schoolFlowTurnRate: 1.10,        //   flow
       schoolBurstTurnRate: 0.90,       //   驚いた直後
-      schoolRoamFit: 0.85,             // calm の中心の範囲：隊形のこの割合までを個体の自由域に収める（1 未満は壁際で少し押しつぶれてよい）
+      schoolRoamFit: 0.75,             // calm の中心の範囲：隊形のこの割合までを個体の自由域に収める（1 未満は壁際で少し押しつぶれてよい。v10：端まで寄せるため 0.85→0.75）
       schoolFlowLoopFit: 0.95,         // flow の周回の大きさ（自由域から隊形の横幅を引いた大きさに対する割合）
       schoolFlowLookAhead: 0.9,        // flow の周回で先回りして狙う角度（rad）
       schoolFlowBob: 0.06,             // flow で上下にうねる幅（m）
@@ -556,14 +556,14 @@
 
       // 魚の巡回（v7）：範囲と壁の寄せは水槽に比例。ただし体長の半分＋すき間は必ずガラスから離し、
       // 旋回半径（速さ ÷ 最大旋回速度）が大きい魚ほど壁の手前で早めに曲がり始める
-      fishPatrolX: tl(1.95),
-      fishPatrolZ: tl(1.75),
-      fishWallStartX: tl(1.95),
-      fishWallFullX: tl(2.52),
-      fishWallStartZ: tl(1.68),
-      fishWallFullZ: tl(2.22),
-      fishWallRamp: tl(0.54),      // 寄せ始め〜寄せ切りの幅
-      fishTurnMargin: 1.0,         // 旋回半径のうち、ガラスの手前に確保する割合（ブリ 0.85m は旋回半径 0.63m）
+      fishPatrolX: tl(2.4),
+      fishPatrolZ: tl(2.1),
+      fishWallStartX: tl(2.4),
+      fishWallFullX: tl(3.0),
+      fishWallStartZ: tl(2.1),
+      fishWallFullZ: tl(2.7),
+      fishWallRamp: tl(0.42),      // 寄せ始め〜寄せ切りの幅
+      fishTurnMargin: 0.45,        // 旋回半径のうち、ガラスの手前に確保する割合（v10：端まで寄せるため 1.0→0.45。体の最終ガード keepFishBodyInTank は別に効く）
       fishGlassGap: 0.04,          // 体の先端とガラスの最小すき間（m。魚に比例）
       fishBodyHalfHeight: 0.22,    // 体高の半分 ≈ 体長 × この値（背びれ込みの目安）
       // イカの home（v7）：前進は home から奥行き +1.4m の円を描くので、手前ガラスと手前の岩から離れるよう奥寄りに置く
