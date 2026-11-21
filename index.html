@@ -199,7 +199,7 @@
     // ===== 定数（水槽寸法：v7 で v6 の 9m × 5.5m・水面 y=2.6 を 2/3 に縮小。魚・イカの大きさは変えない） =====
     const TANK_SCALE = 2 / 3;            // v6 の水槽を 1 とした倍率（STYLE.tankScale）
     const TANK_W = 6 * TANK_SCALE;       // 4.0 (v8: 横幅だけ v7 のさらに 2/3)
-    const TANK_D = 5.5 * TANK_SCALE;     // 3.667
+    const TANK_D = 3.3 * TANK_SCALE;     // 2.2 (v11: 奥行だけ 3/5)
     const HALF_X = TANK_W / 2;           // 3.0
     const HALF_Z = TANK_D / 2;           // 1.833
     const WATER_Y = 2.6 * TANK_SCALE;    // 1.733
@@ -293,7 +293,7 @@
       // 筐体：暗い展示台座・砂側面・ガラス・枠（fog: false で部屋側の黒を維持）
       pedestalWidth: tl(6.7),
       pedestalHeight: tl(1.0),
-      pedestalDepth: tl(6.2),
+      pedestalDepth: tl(3.72),
       pedestalCenterY: tl(-0.55),
       pedestalColor: 0x0b1017,
       pedestalRoughness: 0.86,
@@ -404,31 +404,31 @@
       // （v7 の魚巡回帯 |x|<3.45×倍率 & |z|<1.75×倍率 を避ける配置。sx/sy/sz は縦横比なのでそのまま）
       rockConfigs: tlKeys([
         // 1-4: 左の切り立った岩礁崖（x <= -3.50）
-        { name: 'rock-cliff-left-back',  x: -2.64, z: -2.18, r: 0.90, sx: 0.62, sy: 2.12, sz: 0.72, ry: 0.35, seed: 101, detail: 4, strata: 1.15, moss: 0.85, hero: true },
-        { name: 'rock-cliff-left-mid',   x: -2.68, z: -0.92, r: 0.84, sx: 0.56, sy: 1.70, sz: 1.02, ry: 1.42, seed: 113, detail: 4, strata: 1.25, moss: 0.80, hero: true },
-        { name: 'rock-cliff-left-front', x: -2.65, z:  0.48, r: 0.80, sx: 0.56, sy: 1.22, sz: 1.00, ry: 2.35, seed: 127, detail: 3, strata: 1.00, moss: 0.75, hero: true },
-        { name: 'rock-cliff-left-foot',  x: -2.61, z:  1.86, r: 0.64, sx: 0.78, sy: 0.78, sz: 0.92, ry: 3.90, seed: 139, detail: 3, strata: 0.75, moss: 0.70 },
+        { name: 'rock-cliff-left-back',  x: -2.64, z: -1.31, r: 0.90, sx: 0.62, sy: 2.12, sz: 0.72, ry: 0.35, seed: 101, detail: 4, strata: 1.15, moss: 0.85, hero: true },
+        { name: 'rock-cliff-left-mid',   x: -2.68, z: -0.55, r: 0.84, sx: 0.56, sy: 1.70, sz: 1.02, ry: 1.42, seed: 113, detail: 4, strata: 1.25, moss: 0.80, hero: true },
+        { name: 'rock-cliff-left-front', x: -2.65, z:  0.29, r: 0.80, sx: 0.56, sy: 1.22, sz: 1.00, ry: 2.35, seed: 127, detail: 3, strata: 1.00, moss: 0.75, hero: true },
+        { name: 'rock-cliff-left-foot',  x: -2.61, z:  1.12, r: 0.64, sx: 0.78, sy: 0.78, sz: 0.92, ry: 3.90, seed: 139, detail: 3, strata: 0.75, moss: 0.70 },
 
         // 5-9: 奥の岩礁パノラマ帯（z <= -1.80、中央奥〜右上を下げて深い青い水の抜けを作る）
-        { name: 'rock-back-left-terrace', x: -1.91, z: -2.28, r: 0.84, sx: 1.08, sy: 1.54, sz: 0.54, ry: 0.62, seed: 151, detail: 4, strata: 1.10, moss: 0.70, hero: true },
-        { name: 'rock-back-left-slope',   x: -1.04, z: -2.32, r: 0.76, sx: 1.14, sy: 1.12, sz: 0.52, ry: 1.85, seed: 163, detail: 3, strata: 0.95, moss: 0.65 },
-        { name: 'rock-back-center-ridge', x: -0.10, z: -2.34, r: 0.70, sx: 1.24, sy: 0.88, sz: 0.50, ry: 2.75, seed: 179, detail: 3, strata: 0.85, moss: 0.60 },
-        { name: 'rock-back-right-shelf',  x:  1.28, z: -2.36, r: 0.66, sx: 1.12, sy: 0.74, sz: 0.48, ry: 4.10, seed: 193, detail: 3, strata: 0.80, moss: 0.55 },
-        { name: 'rock-back-right-buttress', x: 1.81, z: -2.30, r: 0.78, sx: 1.08, sy: 1.18, sz: 0.52, ry: 5.05, seed: 211, detail: 4, strata: 1.05, moss: 0.68, hero: true },
+        { name: 'rock-back-left-terrace', x: -1.91, z: -1.37, r: 0.84, sx: 1.08, sy: 1.54, sz: 0.54, ry: 0.62, seed: 151, detail: 4, strata: 1.10, moss: 0.70, hero: true },
+        { name: 'rock-back-left-slope',   x: -1.04, z: -1.39, r: 0.76, sx: 1.14, sy: 1.12, sz: 0.52, ry: 1.85, seed: 163, detail: 3, strata: 0.95, moss: 0.65 },
+        { name: 'rock-back-center-ridge', x: -0.10, z: -1.4, r: 0.70, sx: 1.24, sy: 0.88, sz: 0.50, ry: 2.75, seed: 179, detail: 3, strata: 0.85, moss: 0.60 },
+        { name: 'rock-back-right-shelf',  x:  1.28, z: -1.42, r: 0.66, sx: 1.12, sy: 0.74, sz: 0.48, ry: 4.10, seed: 193, detail: 3, strata: 0.80, moss: 0.55 },
+        { name: 'rock-back-right-buttress', x: 1.81, z: -1.38, r: 0.78, sx: 1.08, sy: 1.18, sz: 0.52, ry: 5.05, seed: 211, detail: 4, strata: 1.05, moss: 0.68, hero: true },
 
         // 10-12: 右の岩礁岬（x >= 3.52）
-        { name: 'rock-cliff-right-back',  x:  3.96, z: -2.14, r: 0.84, sx: 0.62, sy: 1.66, sz: 0.74, ry: 0.95, seed: 227, detail: 4, strata: 1.15, moss: 0.72, hero: true },
-        { name: 'rock-cliff-right-mid',   x:  4.02, z: -0.78, r: 0.76, sx: 0.55, sy: 1.22, sz: 1.00, ry: 2.18, seed: 239, detail: 3, strata: 1.00, moss: 0.65 },
-        { name: 'rock-cliff-right-front', x:  3.95, z:  0.80, r: 0.70, sx: 0.56, sy: 0.88, sz: 1.00, ry: 3.45, seed: 251, detail: 3, strata: 0.85, moss: 0.62 },
+        { name: 'rock-cliff-right-back',  x:  3.96, z: -1.28, r: 0.84, sx: 0.62, sy: 1.66, sz: 0.74, ry: 0.95, seed: 227, detail: 4, strata: 1.15, moss: 0.72, hero: true },
+        { name: 'rock-cliff-right-mid',   x:  4.02, z: -0.47, r: 0.76, sx: 0.55, sy: 1.22, sz: 1.00, ry: 2.18, seed: 239, detail: 3, strata: 1.00, moss: 0.65 },
+        { name: 'rock-cliff-right-front', x:  3.95, z:  0.48, r: 0.70, sx: 0.56, sy: 0.88, sz: 1.00, ry: 3.45, seed: 251, detail: 3, strata: 0.85, moss: 0.62 },
 
         // 13-15: 手前の主役岩礁（favorite-01.png の主役ドーム岩＋右奥の副岩、z >= 1.80 に収める）
-        { name: 'rock-hero-center',       x: -0.15, z:  2.14, r: 0.74, sx: 1.14, sy: 1.04, sz: 0.52, ry: 0.28, seed: 307, detail: 4, strata: 0.70, moss: 1.00, hero: true, fgGuard: true },
-        { name: 'rock-hero-shoulder',     x:  0.42, z:  2.22, r: 0.48, sx: 1.04, sy: 0.82, sz: 0.50, ry: 2.15, seed: 317, detail: 3, strata: 0.65, moss: 0.88, fgGuard: true },
-        { name: 'rock-fg-right-mound',    x:  2.52, z:  2.18, r: 0.66, sx: 1.08, sy: 0.84, sz: 0.56, ry: 4.35, seed: 331, detail: 4, strata: 0.80, moss: 0.85, hero: true, fgGuard: true },
+        { name: 'rock-hero-center',       x: -0.15, z:  1.28, r: 0.74, sx: 1.14, sy: 1.04, sz: 0.52, ry: 0.28, seed: 307, detail: 4, strata: 0.70, moss: 1.00, hero: true, fgGuard: true },
+        { name: 'rock-hero-shoulder',     x:  0.42, z:  1.33, r: 0.48, sx: 1.04, sy: 0.82, sz: 0.50, ry: 2.15, seed: 317, detail: 3, strata: 0.65, moss: 0.88, fgGuard: true },
+        { name: 'rock-fg-right-mound',    x:  2.52, z:  1.31, r: 0.66, sx: 1.08, sy: 0.84, sz: 0.56, ry: 4.35, seed: 331, detail: 4, strata: 0.80, moss: 0.85, hero: true, fgGuard: true },
 
         // 16-17: 砂床の低い平岩（y <= 0.28m、全魚種の遊泳帯の下に完全に収める）
-        { name: 'rock-floor-low-left',    x: -1.27, z:  0.58, r: 0.52, sx: 1.22, sy: 0.40, sz: 0.92, ry: 1.12, seed: 353, detail: 3, strata: 0.45, moss: 0.60, lowFloor: true },
-        { name: 'rock-floor-low-right',   x:  2.20, z: -0.68, r: 0.48, sx: 1.15, sy: 0.38, sz: 0.90, ry: 3.70, seed: 367, detail: 3, strata: 0.40, moss: 0.55, lowFloor: true },
+        { name: 'rock-floor-low-left',    x: -1.27, z:  0.35, r: 0.52, sx: 1.22, sy: 0.40, sz: 0.92, ry: 1.12, seed: 353, detail: 3, strata: 0.45, moss: 0.60, lowFloor: true },
+        { name: 'rock-floor-low-right',   x:  2.20, z: -0.41, r: 0.48, sx: 1.15, sy: 0.38, sz: 0.90, ry: 3.70, seed: 367, detail: 3, strata: 0.40, moss: 0.55, lowFloor: true },
       ], ['x', 'z', 'r']),
 
       // 光の柱（v6：水面から太く降り注ぐ 5 本のボリューム光柱＋揺らめく筋模様）
@@ -445,11 +445,11 @@
       raySwayAmp: 0.018,
       // 下の数値は v6 の設計値。x・z・太さに倍率をかけて使う（傾き・周期はそのまま）
       rayConfigs: tlKeys([
-        { x: -1.10, z:  0.10, width: 1.18, topR: 0.44, botR: 1.02, tiltZ: -0.11, tiltX:  0.04, rotY:  0.20, period: 21.0, phase: 0.4, boost: 0.95 },
-        { x: -0.03, z: -0.15, width: 1.52, topR: 0.58, botR: 1.28, tiltZ: -0.14, tiltX:  0.05, rotY: -0.08, period: 26.0, phase: 1.3, boost: 1.25 },
-        { x:  0.95, z: -0.42, width: 1.38, topR: 0.50, botR: 1.14, tiltZ: -0.17, tiltX:  0.06, rotY:  0.14, period: 29.5, phase: 2.4, boost: 1.12 },
-        { x:  0.41, z: -1.18, width: 1.22, topR: 0.44, botR: 0.98, tiltZ: -0.15, tiltX: -0.04, rotY: -0.18, period: 24.5, phase: 3.9, boost: 0.92 },
-        { x:  1.85, z: -0.72, width: 1.08, topR: 0.38, botR: 0.86, tiltZ: -0.19, tiltX:  0.05, rotY:  0.26, period: 32.0, phase: 5.1, boost: 0.86 },
+        { x: -1.10, z:  0.06, width: 1.18, topR: 0.44, botR: 1.02, tiltZ: -0.11, tiltX:  0.04, rotY:  0.20, period: 21.0, phase: 0.4, boost: 0.95 },
+        { x: -0.03, z: -0.09, width: 1.52, topR: 0.58, botR: 1.28, tiltZ: -0.14, tiltX:  0.05, rotY: -0.08, period: 26.0, phase: 1.3, boost: 1.25 },
+        { x:  0.95, z: -0.25, width: 1.38, topR: 0.50, botR: 1.14, tiltZ: -0.17, tiltX:  0.06, rotY:  0.14, period: 29.5, phase: 2.4, boost: 1.12 },
+        { x:  0.41, z: -0.71, width: 1.22, topR: 0.44, botR: 0.98, tiltZ: -0.15, tiltX: -0.04, rotY: -0.18, period: 24.5, phase: 3.9, boost: 0.92 },
+        { x:  1.85, z: -0.43, width: 1.08, topR: 0.38, botR: 0.86, tiltZ: -0.19, tiltX:  0.05, rotY:  0.26, period: 32.0, phase: 5.1, boost: 0.86 },
       ], ['x', 'z', 'width', 'topR', 'botR']),
 
       // 群れ隊形（v6：密度感のあるベイトボール／トルネードの気配＋光柱の下を回遊）
@@ -567,7 +567,7 @@
       fishGlassGap: 0.04,          // 体の先端とガラスの最小すき間（m。魚に比例）
       fishBodyHalfHeight: 0.22,    // 体高の半分 ≈ 体長 × この値（背びれ込みの目安）
       // イカの home（v7）：前進は home から奥行き +1.4m の円を描くので、手前ガラスと手前の岩から離れるよう奥寄りに置く
-      squidHomes: [[0.71, tl(1.0), -0.75], [-0.71, tl(1.0), -0.55]],
+      squidHomes: [[0.71, tl(1.0), -0.45], [-0.71, tl(1.0), -0.33]],
     };
 
     const BG_COLOR = STYLE.bgColor;
@@ -2374,12 +2374,12 @@ uniform float uGlassReflectRoughness;`)
 
           // 魚の巡回経路保護（v6 の値 × 倍率）：手前岩は z >= 1.80 に、奥岩は z <= -1.79 に収める、低い平岩は y <= 0.28
           if (cfg.fgGuard && wy > tl(0.10)) {
-            wz = Math.max(wz, tl(1.80));
-          } else if (cfg.z < tl(-1.85) && wy > tl(0.12)) {
-            wz = Math.min(wz, tl(-1.79));
-          } else if (cfg.x < tl(-2.37) && wy > tl(0.12) && wz > tl(-1.78) && wz < tl(1.78)) {
+            wz = Math.max(wz, tl(1.08));
+          } else if (cfg.z < tl(-1.11) && wy > tl(0.12)) {
+            wz = Math.min(wz, tl(-1.07));
+          } else if (cfg.x < tl(-2.37) && wy > tl(0.12) && wz > tl(-1.07) && wz < tl(1.07)) {
             wx = Math.min(wx, tl(-2.33));
-          } else if (cfg.x > tl(2.37) && wy > tl(0.12) && wz > tl(-1.78) && wz < tl(1.78)) {
+          } else if (cfg.x > tl(2.37) && wy > tl(0.12) && wz > tl(-1.07) && wz < tl(1.07)) {
             wx = Math.max(wx, tl(2.33));
           }
           if (cfg.lowFloor) {
@@ -2580,22 +2580,22 @@ uniform float uGlassReflectRoughness;`)
       pipeCluster.name = 'prop-clay-pipes';
 
       const pipeL = createHollowPipeMesh(0.185, 0.138, 0.52, clayMat, true);
-      pipeL.position.set(-1.16, 0.14, 2.24);
+      pipeL.position.set(-1.16, 0.14, 1.28);
       pipeL.rotation.set(-0.04, 0.24, 0.03);
       pipeCluster.add(pipeL);
 
       const pipeR = createHollowPipeMesh(0.172, 0.128, 0.50, clayMat, true);
-      pipeR.position.set(-0.90, 0.13, 2.21);
+      pipeR.position.set(-0.90, 0.13, 1.27);
       pipeR.rotation.set(-0.03, 0.16, -0.02);
       pipeCluster.add(pipeR);
 
       const topCulvert = createPerforatedSquareBlock(0.24, 0.24, 0.44, 0.082, clayMat);
-      topCulvert.position.set(-1.03, 0.34, 2.19);
+      topCulvert.position.set(-1.03, 0.34, 1.25);
       topCulvert.rotation.set(-0.05, 0.20, -0.09);
       pipeCluster.add(topCulvert);
 
       const smallPotPipe = createHollowPipeMesh(0.112, 0.082, 0.34, terraMat, true);
-      smallPotPipe.position.set(-0.72, 0.095, 2.46);
+      smallPotPipe.position.set(-0.72, 0.095, 1.37);
       smallPotPipe.rotation.set(-0.08, 0.22, 0.04);
       pipeCluster.add(smallPotPipe);
 
@@ -2617,7 +2617,7 @@ uniform float uGlassReflectRoughness;`)
       corrGeo.computeVertexNormals();
       const leaningPipe = new THREE.Mesh(corrGeo, palePipeMat);
       leaningPipe.name = 'prop-leaning-pipe';
-      leaningPipe.position.set(-0.51, 0.25, 2.52);
+      leaningPipe.position.set(-0.51, 0.25, 1.4);
       leaningPipe.rotation.set(-0.22, 0.16, -0.68);
       group.add(leaningPipe);
       props.push(leaningPipe);
@@ -2649,12 +2649,12 @@ uniform float uGlassReflectRoughness;`)
       };
 
       const rustBoxA = makeRustCube(0.28, 0.088);
-      rustBoxA.position.set(0.69, 0.11, 2.26);
+      rustBoxA.position.set(0.69, 0.11, 1.36);
       rustBoxA.rotation.set(0.06, -0.28, 0.12);
       rightReefSet.add(rustBoxA);
 
       const rustBoxB = makeRustCube(0.25, 0.078);
-      rustBoxB.position.set(0.91, 0.10, 2.28);
+      rustBoxB.position.set(0.91, 0.10, 1.37);
       rustBoxB.rotation.set(-0.08, 0.22, -0.07);
       rightReefSet.add(rustBoxB);
 
@@ -2681,7 +2681,7 @@ uniform float uGlassReflectRoughness;`)
         hoop.position.y = hy;
         barrelGroup.add(hoop);
       }
-      barrelGroup.position.set(1.16, 0.145, 2.20);
+      barrelGroup.position.set(1.16, 0.145, 1.32);
       barrelGroup.rotation.set(0.12, -0.42, Math.PI * 0.5 + 0.08);
       rightReefSet.add(barrelGroup);
 
@@ -2694,10 +2694,10 @@ uniform float uGlassReflectRoughness;`)
       cobbleGroup.name = 'prop-cobbles';
       const cobbleRand = makePrng(5117);
       const cobbleCenters = [
-        [0.55, 2.36, 0.09], [0.64, 2.42, 0.08], [0.77, 2.44, 0.10], [0.89, 2.45, 0.085],
-        [1.01, 2.40, 0.095], [1.12, 2.42, 0.08], [1.25, 2.36, 0.09], [0.81, 2.12, 0.08],
-        [-1.30, 2.38, 0.085], [-1.05, 2.44, 0.075], [-0.81, 2.45, 0.09], [-0.59, 2.46, 0.08],
-        [-1.53, 2.26, 0.095], [1.37, 2.30, 0.09], [1.93, 2.30, 0.085], [0.15, 2.47, 0.08],
+        [0.55, 1.42, 0.09], [0.64, 1.45, 0.08], [0.77, 1.46, 0.10], [0.89, 1.4, 0.085],
+        [1.01, 1.44, 0.095], [1.12, 1.45, 0.08], [1.25, 1.42, 0.09], [0.81, 1.27, 0.08],
+        [-1.30, 1.43, 0.085], [-1.05, 1.46, 0.075], [-0.81, 1.47, 0.09], [-0.59, 1.48, 0.08],
+        [-1.53, 1.36, 0.095], [1.37, 1.38, 0.09], [1.93, 1.38, 0.085], [0.15, 1.48, 0.08],
       ];
       for (let i = 0; i < cobbleCenters.length; i++) {
         const [cx, cz, cr] = cobbleCenters[i];
@@ -2725,17 +2725,17 @@ uniform float uGlassReflectRoughness;`)
       const driftGroup = new THREE.Group();
       driftGroup.name = 'prop-driftwood';
       const trunkCurve = new THREE.CatmullRomCurve3([
-        new THREE.Vector3(-2.12, -0.02, 2.18),
-        new THREE.Vector3(-1.88,  0.07, 2.12),
-        new THREE.Vector3(-1.64,  0.11, 2.22),
-        new THREE.Vector3(-1.45,  0.03, 2.16),
+        new THREE.Vector3(-2.12, -0.02, 1.31),
+        new THREE.Vector3(-1.88,  0.07, 1.27),
+        new THREE.Vector3(-1.64,  0.11, 1.33),
+        new THREE.Vector3(-1.45,  0.03, 1.3),
       ]);
       const trunkMesh = new THREE.Mesh(new THREE.TubeGeometry(trunkCurve, 18, 0.068, 10, false), woodMat);
       driftGroup.add(trunkMesh);
       const branchCurve = new THREE.CatmullRomCurve3([
-        new THREE.Vector3(-1.81, 0.08, 2.14),
-        new THREE.Vector3(-1.70, 0.18, 2.02),
-        new THREE.Vector3(-1.61, 0.21, 1.96),
+        new THREE.Vector3(-1.81, 0.08, 1.28),
+        new THREE.Vector3(-1.70, 0.18, 1.21),
+        new THREE.Vector3(-1.61, 0.21, 1.18),
       ]);
       const branchMesh = new THREE.Mesh(new THREE.TubeGeometry(branchCurve, 10, 0.032, 8, false), woodMat);
       driftGroup.add(branchMesh);
@@ -2759,7 +2759,7 @@ uniform float uGlassReflectRoughness;`)
       jarGeo.computeVertexNormals();
       const amphora = new THREE.Mesh(jarGeo, terraMat);
       amphora.name = 'prop-amphora';
-      amphora.position.set(2.15, 0.09, 2.14);
+      amphora.position.set(2.15, 0.09, 1.28);
       amphora.rotation.set(0.15, -0.65, Math.PI * 0.44);
       group.add(amphora);
       props.push(amphora);
@@ -2857,20 +2857,20 @@ uniform float uGlassReflectRoughness;`)
       // 左崖・左奥岩礁の窪みに自然な房として偏在配置（中央を均等に並べない）
       const strandSpecs = [
         // 左奥テラスのケルプ房
-        { x: -2.28, y: 0.92, z: -2.02, h: 1.05, w: 0.24, leanX:  0.22, leanZ: 0.10, rotY:  0.35, phase: 0.3, period: 7.4 },
-        { x: -2.17, y: 0.88, z: -2.14, h: 0.88, w: 0.20, leanX:  0.16, leanZ: 0.12, rotY: -0.45, phase: 1.2, period: 8.2 },
-        { x: -1.97, y: 0.78, z: -2.06, h: 0.96, w: 0.22, leanX:  0.24, leanZ: 0.08, rotY:  0.75, phase: 2.4, period: 6.9 },
+        { x: -2.28, y: 0.92, z: -1.21, h: 1.05, w: 0.24, leanX:  0.22, leanZ: 0.10, rotY:  0.35, phase: 0.3, period: 7.4 },
+        { x: -2.17, y: 0.88, z: -1.28, h: 0.88, w: 0.20, leanX:  0.16, leanZ: 0.12, rotY: -0.45, phase: 1.2, period: 8.2 },
+        { x: -1.97, y: 0.78, z: -1.24, h: 0.96, w: 0.22, leanX:  0.24, leanZ: 0.08, rotY:  0.75, phase: 2.4, period: 6.9 },
         // 左中段崖の低い海藻房（x <= -3.55）
-        { x: -2.45, y: 0.72, z: -1.18, h: 0.72, w: 0.22, leanX:  0.18, leanZ: 0.14, rotY:  1.15, phase: 1.7, period: 6.6 },
-        { x: -2.41, y: 0.64, z: -0.96, h: 0.58, w: 0.18, leanX:  0.14, leanZ: 0.10, rotY:  0.40, phase: 3.1, period: 7.5 },
-        { x: -2.44, y: 0.55, z:  0.28, h: 0.64, w: 0.20, leanX:  0.15, leanZ: 0.12, rotY:  1.30, phase: 4.2, period: 7.9 },
+        { x: -2.45, y: 0.72, z: -0.71, h: 0.72, w: 0.22, leanX:  0.18, leanZ: 0.14, rotY:  1.15, phase: 1.7, period: 6.6 },
+        { x: -2.41, y: 0.64, z: -0.58, h: 0.58, w: 0.18, leanX:  0.14, leanZ: 0.10, rotY:  0.40, phase: 3.1, period: 7.5 },
+        { x: -2.44, y: 0.55, z:  0.17, h: 0.64, w: 0.20, leanX:  0.15, leanZ: 0.12, rotY:  1.30, phase: 4.2, period: 7.9 },
         // 奥左中〜奥右の岩陰アクセント（控えめな丈で青い水の抜けを邪魔しない）
-        { x: -1.41, y: 0.58, z: -2.16, h: 0.76, w: 0.21, leanX:  0.18, leanZ: 0.08, rotY: -0.25, phase: 2.9, period: 8.4 },
-        { x: -1.29, y: 0.54, z: -2.22, h: 0.62, w: 0.18, leanX:  0.12, leanZ: 0.10, rotY:  0.60, phase: 4.7, period: 7.1 },
-        { x:  1.84, y: 0.66, z: -2.14, h: 0.78, w: 0.22, leanX: -0.18, leanZ: 0.09, rotY:  0.50, phase: 3.8, period: 8.0 },
-        { x:  1.99, y: 0.62, z: -2.20, h: 0.64, w: 0.19, leanX: -0.14, leanZ: 0.11, rotY: -0.65, phase: 5.3, period: 7.3 },
-        { x:  2.41, y: 0.64, z: -1.48, h: 0.68, w: 0.20, leanX: -0.16, leanZ: 0.10, rotY: -1.10, phase: 0.8, period: 6.8 },
-        { x:  2.44, y: 0.52, z:  0.65, h: 0.54, w: 0.18, leanX: -0.12, leanZ: 0.08, rotY: -1.35, phase: 2.1, period: 7.7 },
+        { x: -1.41, y: 0.58, z: -1.3, h: 0.76, w: 0.21, leanX:  0.18, leanZ: 0.08, rotY: -0.25, phase: 2.9, period: 8.4 },
+        { x: -1.29, y: 0.54, z: -1.33, h: 0.62, w: 0.18, leanX:  0.12, leanZ: 0.10, rotY:  0.60, phase: 4.7, period: 7.1 },
+        { x:  1.84, y: 0.66, z: -1.28, h: 0.78, w: 0.22, leanX: -0.18, leanZ: 0.09, rotY:  0.50, phase: 3.8, period: 8.0 },
+        { x:  1.99, y: 0.62, z: -1.32, h: 0.64, w: 0.19, leanX: -0.14, leanZ: 0.11, rotY: -0.65, phase: 5.3, period: 7.3 },
+        { x:  2.41, y: 0.64, z: -0.89, h: 0.68, w: 0.20, leanX: -0.16, leanZ: 0.10, rotY: -1.10, phase: 0.8, period: 6.8 },
+        { x:  2.44, y: 0.52, z:  0.39, h: 0.54, w: 0.18, leanX: -0.12, leanZ: 0.08, rotY: -1.35, phase: 2.1, period: 7.7 },
       ];
 
       const strands = strandSpecs.map((sp, idx) => {
