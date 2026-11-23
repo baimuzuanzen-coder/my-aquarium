@@ -223,8 +223,10 @@
 
       // 暗い展示室背景・水中フォグ・照明・露出・カメラ（v6：部屋は暗く、水槽内だけ青く明るい）
       bgColor: 0x03070e,
-      fogColor: 0x042663,
-      fogDensity: perM(0.032),   // v7：視線の水中距離が 2/3 になる分、v6 と同じ霞み方になるよう ÷倍率（0.048）
+      // v12：霧（FogExp2）は「視線が水の中を通った長さ」で効かせる（applyWaterPathFog）。ガラスの手前の空気では霞まない。
+      // 濃さは奥のガラス際（水中 2.2m）で約 47%＝岩の水中散乱（underwaterScatterRate）と同じ霞み方。手前 0.5m では約 3%
+      fogColor: 0x08487e,        // v12：0x042663（深い青）→ 少し緑に寄せた青緑（遠くの魚が青緑に溶ける）
+      fogDensity: perM(0.24),    // v12：perM(0.032)=0.048（カメラからの距離）→ perM(0.24)=0.36（水中の距離）
       hemiSkyColor: 0x62b4ff,
       hemiGroundColor: 0x04142c,
       hemiIntensity: 0.74,
@@ -363,12 +365,20 @@
       causticsSpeed1: 0.58,
       causticsSpeed2: 0.88,
       causticsPow: 4.4,
-      causticsSandGain: 0.30,
+      // v12：砂は「明るい筋の間を暗くする」ことで揺らめきを読ませる。光だまりの中の平均の明るさは v11 とほぼ同じ（約 1.92）のまま、
+      // 筋の頂（約 2.28→3.09）と筋の間（約 1.68→1.13）の差を広げる（明暗比 1.36→2.73。直接光 ×1.62 を基準にした概算）
+      causticsSandGain: 0.42,           // v12：0.30 → 0.42（筋に足す水色の光）
+      causticsSandPoolBase: 0.70,       // v12：光だまりの中の筋の間の明るさ（v11 は 1.04 の固定値）
+      causticsSandPoolBoost: 0.95,      // v12：筋の頂で足す明るさ（v11 は 0.18 の固定値）
+      causticsSandOutside: 0.68,        // 光だまりの外の明るさ（v11 の固定値をそのまま STYLE へ）
+      causticsSandMaxGain: 0.60,        // v12：砂の gain の上限（v11 は 0.34 の固定値で、0.30 より上げられなかった）
       causticsSandRadiusX: tl(3.8),
       causticsSandRadiusZ: tl(2.4),
       causticsSandInner: 0.28,
       causticsSandOuter: 1.05,
-      causticsRockGain: 0.20,
+      causticsRockGain: 0.28,           // v12：0.20 → 0.28（砂より弱く）
+      causticsRockMaxGain: 0.40,        // v12：岩・小物・海藻の gain の上限（v11 は 0.24 の固定値）
+      causticsPropGain: 0.20,           // v12：沈んだ小物 0.15 → 0.20（v11 は buildSunkenProps 内の固定値）
 
       // 砂・岩の質感（v6：瀬戸内海水槽の明るい貝殻砂利＋暗赤褐色＆苔の岩礁）
       grainTexSize: 256,
@@ -731,6 +741,42 @@
       return rt.texture;
     }
 
+    // ===== 部品：水中距離フォグ (applyWaterPathFog, v12。魚・イカ・群れ・マリンスノーなど fog が有効な材質すべて) =====
+    // three 標準の FogExp2 は「カメラからの奥行き」で霞むため、ガラスの手前の空気（既定カメラで約 3.9m）まで霞みに数えてしまい、
+    // 手前の魚を白けさせずに奥を溶かすことができなかった。ここでは霧の頂点部品 fog_vertex だけを差し替え、vFogDepth を
+    // 「カメラから頂点までの視線が水槽の水（applyCaustics の aqWaterRayDistance と同じ箱）の中を通る長さ」にする。
+    // 霞み方の式（fog_fragment の 1 - exp(-(密度×距離)^2)）・色・密度は標準の scene.fog（STYLE.fogColor / fogDensity）のまま。
+    // 世界座標は mvPosition から求める（群れの InstancedMesh や骨入りの魚でも正しい）。描画パス・uniform は増やさない。
+    // 材質を 1 つでも組み立てる（描画する）前に 1 回呼ぶこと。
+    function applyWaterPathFog(options = {}) {
+      const halfX = options.halfX ?? HALF_X;
+      const halfZ = options.halfZ ?? HALF_Z;
+      const topY = options.waterY ?? WATER_Y;
+      const bottomY = options.bottomY ?? -0.35 * TANK_SCALE;   // applyCaustics の箱と同じ下端
+      const f = (v) => v.toFixed(4);
+      THREE.ShaderChunk.fog_vertex = `
+#ifdef USE_FOG
+{
+  vec3 aqFogRay = ( vec4( mvPosition.xyz, 0.0 ) * viewMatrix ).xyz;
+  float aqFogLen = length( aqFogRay );
+  vec3 aqFogDir = aqFogRay / max( aqFogLen, 1e-5 );
+  aqFogDir = vec3(
+    abs( aqFogDir.x ) < 1e-5 ? 1e-5 : aqFogDir.x,
+    abs( aqFogDir.y ) < 1e-5 ? 1e-5 : aqFogDir.y,
+    abs( aqFogDir.z ) < 1e-5 ? 1e-5 : aqFogDir.z
+  );
+  vec3 aqFogT0 = ( vec3( ${f(-halfX)}, ${f(bottomY)}, ${f(-halfZ)} ) - cameraPosition ) / aqFogDir;
+  vec3 aqFogT1 = ( vec3( ${f(halfX)}, ${f(topY)}, ${f(halfZ)} ) - cameraPosition ) / aqFogDir;
+  vec3 aqFogNear = min( aqFogT0, aqFogT1 );
+  vec3 aqFogFar = max( aqFogT0, aqFogT1 );
+  float aqFogEnter = max( max( aqFogNear.x, aqFogNear.y ), max( aqFogNear.z, 0.0 ) );
+  float aqFogExit = min( min( aqFogFar.x, aqFogFar.y ), aqFogFar.z );
+  vFogDepth = max( 0.0, min( aqFogLen, aqFogExit ) - aqFogEnter );
+}
+#endif`;
+      return { halfX, halfZ, topY, bottomY };
+    }
+
     // ===== レンダラ・シーン・環境・照明・カメラ =====
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, STYLE.maxPixelRatio));
@@ -742,6 +788,7 @@
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(BG_COLOR);
     scene.fog = new THREE.FogExp2(STYLE.fogColor, STYLE.fogDensity);
+    const waterPathFogBox = applyWaterPathFog();   // v12：霧の距離を「水の中を通った長さ」にする（最初の描画より前）
 
     // RoomEnvironment を fallback として保持しつつ、水族館専用の水中照明 PMREM を適用
     const aquariumEnvTex = typeof RoomEnvironment === 'function'
@@ -1206,7 +1253,7 @@
     // 視線が水槽内を通過する実距離 waterDist をレイ-AABB で算出し、手前は鮮明・奥ほど深い青に沈める
     function applyCaustics(material, options = {}) {
       const mode = options.mode === 'rock' ? 'rock' : 'sand';
-      const maxGain = mode === 'sand' ? 0.34 : 0.24;
+      const maxGain = mode === 'sand' ? STYLE.causticsSandMaxGain : STYLE.causticsRockMaxGain;   // v12：0.34 / 0.24 の固定値 → STYLE
       const gain = Math.min(options.gain ?? (mode === 'sand' ? STYLE.causticsSandGain : STYLE.causticsRockGain), maxGain);
       const waterDepthEnabled = options.underwaterDepth !== false;
 
@@ -1226,6 +1273,8 @@
         uCausticColor: { value: new THREE.Color(options.color ?? STYLE.causticsColor) },
         uCausticRadius: { value: new THREE.Vector2(options.radiusX ?? STYLE.causticsSandRadiusX, options.radiusZ ?? STYLE.causticsSandRadiusZ) },
         uCausticMaskRange: { value: new THREE.Vector2(options.inner ?? STYLE.causticsSandInner, options.outer ?? STYLE.causticsSandOuter) },
+        // v12：砂の光だまりの明暗（x＝筋の間、y＝筋の頂で足す分、z＝光だまりの外）
+        uCausticPool: { value: new THREE.Vector3(options.poolBase ?? STYLE.causticsSandPoolBase, options.poolBoost ?? STYLE.causticsSandPoolBoost, options.outside ?? STYLE.causticsSandOutside) },
         uTankHalf: { value: new THREE.Vector3(HALF_X, WATER_Y, HALF_Z) },
         uUwAbsorb: { value: new THREE.Vector3(...(options.underwaterAbsorb ?? STYLE.underwaterAbsorb)) },
         uUwScatterRate: { value: options.underwaterScatterRate ?? STYLE.underwaterScatterRate },
@@ -1259,6 +1308,7 @@ uniform float uCausticPow;
 uniform vec3 uCausticColor;
 uniform vec2 uCausticRadius;
 uniform vec2 uCausticMaskRange;
+uniform vec3 uCausticPool;
 uniform vec3 uTankHalf;
 uniform vec3 uUwAbsorb;
 uniform float uUwScatterRate;
@@ -1309,7 +1359,7 @@ float aqWaterRayDistance(vec3 worldPos, vec3 camPos, vec3 tankHalf) {
   float d = length(vec2(vCausticWorldPos.x / uCausticRadius.x, (vCausticWorldPos.z - ${(0.35 * TANK_SCALE).toFixed(4)}) / uCausticRadius.y));
   float lightPoolMask = 1.0 - smoothstep(uCausticMaskRange.x, uCausticMaskRange.y, d);
   float cPat = aqCausticPattern(vCausticWorldPos.xz, uCausticTime);
-  reflectedLight.directDiffuse *= mix(0.68, 1.04 + 0.18 * cPat, lightPoolMask);
+  reflectedLight.directDiffuse *= mix(uCausticPool.z, uCausticPool.x + uCausticPool.y * cPat, lightPoolMask);
   float causticContrib = cPat * (0.28 + 0.72 * lightPoolMask) * uCausticGain;
   reflectedLight.directDiffuse += diffuseColor.rgb * uCausticColor * causticContrib;
 }
@@ -2490,7 +2540,7 @@ uniform float uGlassReflectRoughness;`)
           bumpMap: bumpTex ?? null,
           bumpScale: opts.bumpScale ?? 0.16,
         });
-        causticUpdaters.push(applyCaustics(mat, { mode: 'rock', gain: opts.causticGain ?? 0.15, cacheTag: opts.cacheTag }));
+        causticUpdaters.push(applyCaustics(mat, { mode: 'rock', gain: opts.causticGain ?? STYLE.causticsPropGain, cacheTag: opts.cacheTag }));   // v12：0.15 → STYLE
         return mat;
       };
 
@@ -3351,6 +3401,8 @@ uniform float uGlassReflectRoughness;`)
           bgColor: scene.background.getHex(),
           fogColor: scene.fog.color.getHex(),
           fogDensity: scene.fog.density,
+          fogDistance: 'water-path',      // v12：霧の距離は水中を通った長さ（applyWaterPathFog）
+          fogWaterBox: waterPathFogBox,   // v12：その水の箱（x は ±halfX、z は ±halfZ、y は bottomY〜topY）
           hemiSkyColor: hemiLight.color.getHex(),
           hemiGroundColor: hemiLight.groundColor.getHex(),
           hemiIntensity: hemiLight.intensity,
